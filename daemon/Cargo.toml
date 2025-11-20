@@ -1,0 +1,30 @@
+[package]
+name = "aurora-daemon"
+version = "0.1.0"
+edition = "2024"
+
+authors = ["Joseph Chacko <josephchacko2006@gmail.com>"]
+license = "MIT OR Apache-2.0"
+description = "musicmanV3 daemon, mpd clone."
+readme = "../README.md"
+homepage = "https://github.com/mavenried"
+repository = "https://github.com/mavenried/musicmanV3"
+keywords = ["cli", "music"]
+categories = ["command-line-utilities"]
+
+[dependencies]
+actix-web = "4.12.0"
+lofty = { version = "0.22.4" }
+anyhow = "1.0.100"
+dirs = "6.0.0"
+rodio = "0.21.1"
+serde = "1.0.228"
+serde_json = "1.0.145"
+symphonia = { version = "0.5.5", features = ["mp3"] }
+tracing = "0.1.41"
+tracing-subscriber = "0.3.20"
+uuid = { version = "1.18.1", features = ["v5", "serde"] }
+walkdir = "2.5.0"
+tokio = { version = "1.48.0", features = ["full"] }
+daemonize = "0.5.0"
+signal-hook = "0.3.18"
