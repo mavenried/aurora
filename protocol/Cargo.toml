@@ -1,0 +1,18 @@
+[package]
+name = "aurora-protocol"
+version = "0.1.0"
+edition = "2024"
+
+authors = ["Joseph Chacko <josephchacko2006@gmail.com>"]
+license = "MIT OR Apache-2.0"
+description = "Protocol for Aurora Music Player"
+readme = "../README.md"
+homepage = "https://github.com/mavenried"
+repository = "https://github.com/mavenried/aurora"
+
+[dependencies]
+serde = { version = "1.0.219", features = ["derive"] }
+uuid = { version = "1.4.1", features = ["v4", "serde"] }
+
+
+
