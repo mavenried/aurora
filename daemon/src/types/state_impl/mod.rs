@@ -1,5 +1,5 @@
-use crate::types::{GetReturn, Song, Status};
-use crate::types::{SearchType, SongIndex, SongMeta};
+use crate::types::{GetReturn, SongIndex};
+use aurora_protocol::{Song, SongMeta, Status};
 use rodio::Sink;
 use std::sync::Arc;
 use std::time::Duration;
@@ -20,16 +20,11 @@ mod source;
 impl StateStruct {
     pub fn to_status(&self) -> Status {
         Status {
-            current_song: if let Some(songmeta) = &self.current_song {
-                Some(Song::from(songmeta))
-            } else {
-                None
-            },
-            queue: self
-                .queue
-                .iter()
-                .map(|songmeta| Song::from(songmeta))
-                .collect(),
+            current_song: self
+                .current_song
+                .clone()
+                .map(|songmeta| Song::from(&songmeta)),
+            queue: self.queue.iter().map(Song::from).collect(),
             current_idx: self.current_idx,
             is_paused: self.is_paused(),
             position: if let Some(audio) = &self.audio {

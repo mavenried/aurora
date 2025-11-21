@@ -1,6 +1,6 @@
 use std::process::exit;
 
-use crate::types::*;
+use aurora_protocol::{Playlist, PlaylistIn, PlaylistMinimal};
 use std::io::Result;
 use tokio::fs;
 use uuid::Uuid;
@@ -52,7 +52,7 @@ pub async fn get_all_playlists() -> Result<Vec<PlaylistMinimal>> {
     Ok(result)
 }
 
-pub async fn create_playlist(playlist: Playlist) -> Result<String> {
+pub async fn create_playlist(inp: PlaylistIn) -> Result<String> {
     let playlists_dir = dirs::config_dir()
         .unwrap_or_else(|| {
             tracing::error!("No config dir.");
@@ -62,6 +62,12 @@ pub async fn create_playlist(playlist: Playlist) -> Result<String> {
         .join("playlists");
 
     fs::create_dir_all(&playlists_dir).await?;
+
+    let playlist = Playlist {
+        title: inp.title.clone(),
+        id: Uuid::new_v5(&Uuid::NAMESPACE_URL, inp.title.as_bytes()),
+        songs: inp.songs,
+    };
 
     let file_path = playlists_dir.join(format!("{}.json", playlist.id));
     let data = serde_json::to_string_pretty(&playlist)?;

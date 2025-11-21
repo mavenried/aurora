@@ -1,16 +1,14 @@
-use actix_web::{App, HttpServer, web};
 use daemonize::Daemonize;
 use signal_hook::{consts::TERM_SIGNALS, iterator::Signals};
 use std::{
     fs::{File, remove_file},
-    path::PathBuf,
     process::exit,
     sync::Arc,
 };
-use tokio::sync::Mutex;
+use tokio::{net::TcpListener, sync::Mutex};
 
+mod handlers;
 mod helpers;
-mod services;
 mod types;
 mod watcher_thread;
 use types::*;
@@ -18,7 +16,7 @@ use types::*;
 const PIDFILE: &str = "/tmp/aurora-daemon.pid";
 const OUTFILE: &str = "/tmp/aurora-daemon.out";
 
-#[actix_web::main]
+#[tokio::main]
 async fn main() -> std::io::Result<()> {
     tracing_subscriber::fmt::init();
 
@@ -34,6 +32,8 @@ async fn main() -> std::io::Result<()> {
     }
     std::thread::spawn(move || {
         let mut signals = Signals::new(TERM_SIGNALS).unwrap();
+
+        #[allow(clippy::never_loop)]
         for sig in signals.forever() {
             tracing::info!("Received signal {:?}, cleaning up PID file.", sig);
             remove_file(PIDFILE).ok();
@@ -57,13 +57,13 @@ async fn main() -> std::io::Result<()> {
     };
     let sink = rodio::Sink::connect_new(stream_handle.mixer());
 
-    helpers::generate_index(&PathBuf::from(dirs::home_dir().unwrap().join("Music"))).await?;
+    helpers::generate_index(&dirs::home_dir().unwrap().join("Music")).await?;
     let index = helpers::load_index().await?;
-    let state = web::Data::new(Mutex::new(StateStruct {
+    let state = Arc::new(Mutex::new(StateStruct {
         current_idx: 0,
         current_song: None,
         queue: Vec::new(),
-        index: index,
+        index,
         sink: Arc::new(sink),
         audio: None,
     }));
@@ -71,26 +71,18 @@ async fn main() -> std::io::Result<()> {
     let state_clone = state.clone();
     tokio::spawn(async move { watcher_thread::init(state_clone).await });
 
-    let Ok(server) = HttpServer::new(move || {
-        App::new()
-            .app_data(state.clone())
-            .service(services::next)
-            .service(services::prev)
-            .service(services::seek)
-            .service(services::clear)
-            .service(services::pause)
-            .service(services::search)
-            .service(services::status)
-            .service(services::enqueue)
-            .service(services::albumart)
-            .service(services::playlist_get)
-            .service(services::playlist_list)
-            .service(services::playlist_create)
-    })
-    .bind(("0.0.0.0", port)) else {
-        tracing::error!("Could not start HttpServer at {port}");
-        std::process::exit(1);
+    let Ok(listener) = TcpListener::bind(format!("0.0.0.0:{port}")).await else {
+        tracing::error!("Could not bind to port {port}.");
+        std::process::exit(1)
     };
-
-    server.run().await
+    loop {
+        let (socket, addr) = listener.accept().await?;
+        tracing::info!("New client: {:?}", addr);
+        let state_clone = state.clone();
+        tokio::spawn(async move {
+            if let Err(e) = handlers::handle_client(socket, state_clone).await {
+                tracing::error!("Error with client {:?}: {:?}", addr, e);
+            }
+        });
+    }
 }

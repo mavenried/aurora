@@ -1,4 +1,6 @@
-use super::{SearchType, SongMeta, StateStruct};
+use crate::types::StateStruct;
+use aurora_protocol::{SearchType, SongMeta};
+
 impl StateStruct {
     pub async fn search(&self, s: SearchType) -> Vec<SongMeta> {
         let mut results = Vec::new();
@@ -6,7 +8,7 @@ impl StateStruct {
         match s {
             SearchType::ByTitle(query) => {
                 let q = query.to_lowercase();
-                for (_id, meta) in &self.index {
+                for meta in self.index.values() {
                     if meta.title.to_lowercase().contains(&q) {
                         results.push(meta.clone());
                     }
@@ -14,7 +16,7 @@ impl StateStruct {
             }
             SearchType::ByArtist(query) => {
                 let q = query.to_lowercase();
-                for (_id, meta) in &self.index {
+                for meta in self.index.values() {
                     for artist in meta.artists.clone() {
                         if artist.to_lowercase().contains(&q) {
                             results.push(meta.clone());

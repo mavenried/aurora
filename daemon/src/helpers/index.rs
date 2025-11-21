@@ -1,6 +1,6 @@
+use aurora_protocol::SongMeta;
 use std::{collections::HashMap, path::PathBuf, process::exit, time::Duration};
 
-use crate::types::*;
 use symphonia::{
     core::{
         formats::FormatOptions, io::MediaSourceStream, meta::MetadataOptions, units::TimeStamp,
@@ -68,10 +68,10 @@ pub async fn generate_index(music_dir: &PathBuf) -> std::io::Result<()> {
         let mut duration = Duration::ZERO;
         let mut meta_opt = format.metadata();
 
-        if meta_opt.current().is_none() {
-            if let Some(meta) = probe.metadata.get() {
-                meta_opt = meta;
-            }
+        if meta_opt.current().is_none()
+            && let Some(meta) = probe.metadata.get()
+        {
+            meta_opt = meta;
         }
         if let Some(rev) = meta_opt.current() {
             // rev.tags() returns an iterator of tags; tag.key and tag.value are Options
@@ -86,15 +86,14 @@ pub async fn generate_index(music_dir: &PathBuf) -> std::io::Result<()> {
             }
         }
 
-        if let Some(track) = format.tracks().first() {
-            if let (Some(tb), Some(n_frames)) =
+        if let Some(track) = format.tracks().first()
+            && let (Some(tb), Some(n_frames)) =
                 (track.codec_params.time_base, track.codec_params.n_frames)
-            {
-                let ts: TimeStamp = n_frames as TimeStamp;
-                let time = tb.calc_time(ts); // has .seconds (u64) and .frac (f64)
-                duration = Duration::from_secs(time.seconds)
-                    + Duration::from_millis((time.frac * 1000.) as u64)
-            }
+        {
+            let ts: TimeStamp = n_frames as TimeStamp;
+            let time = tb.calc_time(ts); // has .seconds (u64) and .frac (f64)
+            duration = Duration::from_secs(time.seconds)
+                + Duration::from_millis((time.frac * 1000.) as u64)
         }
 
         let id = uuid::Uuid::new_v5(&Uuid::NAMESPACE_URL, path.display().to_string().as_bytes());
@@ -107,7 +106,7 @@ pub async fn generate_index(music_dir: &PathBuf) -> std::io::Result<()> {
             id,
             title,
             artists,
-            duration: duration,
+            duration,
             path,
         };
 

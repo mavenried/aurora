@@ -28,7 +28,7 @@ impl AudioBuffer {
             sample_rate,
             duration,
             fully_loaded: false,
-            channels: channels,
+            channels,
         }
     }
 
@@ -109,10 +109,10 @@ impl SeekableAudio {
             .count() as u16;
 
         let mut duration = Duration::ZERO;
-        if let Some(tb) = track.codec_params.time_base {
-            if let Some(frames) = track.codec_params.n_frames {
-                duration = tb.calc_time(frames).into();
-            }
+        if let Some(tb) = track.codec_params.time_base
+            && let Some(frames) = track.codec_params.n_frames
+        {
+            duration = tb.calc_time(frames).into();
         }
 
         Ok((rate, channels, duration))
