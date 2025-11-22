@@ -1,7 +1,8 @@
+use crate::*;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum Request {
     Play(Uuid),
     PlaylistList,
@@ -14,11 +15,10 @@ pub enum Request {
     Pause,
     Seek(u64),
     Search(SearchType),
+    ReplaceQueue(Vec<Song>),
 }
 
-pub use crate::*;
-
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum Response {
     Error { err_id: u8, err_msg: String },
     Status(Status),
@@ -26,4 +26,5 @@ pub enum Response {
     Picture(String),
     PlaylistResults(Playlist),
     PlaylistList(Vec<PlaylistMinimal>),
+    Queue(Vec<Song>),
 }

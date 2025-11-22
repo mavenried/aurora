@@ -9,16 +9,15 @@ pub use songs::*;
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Status {
     pub current_song: Option<Song>,
-    pub queue: Vec<Song>,
     pub current_idx: usize,
     pub is_paused: bool,
     pub position: Duration,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum SearchType {
     ByTitle(String),
     ByArtist(String),

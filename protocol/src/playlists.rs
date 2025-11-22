@@ -3,7 +3,7 @@ use uuid::Uuid;
 
 use crate::Song;
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct PlaylistMinimal {
     pub id: Uuid,
     pub name: String,
@@ -17,7 +17,7 @@ pub struct Playlist {
     pub songs: Vec<Song>,
 }
 
-#[derive(Clone, Deserialize, Serialize, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct PlaylistIn {
     pub title: String,
     pub songs: Vec<Song>,
