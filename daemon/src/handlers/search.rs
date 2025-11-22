@@ -1,7 +1,11 @@
 use crate::{helpers::send_to_client, types::*};
 use aurora_protocol::{Response, SearchType, Song};
 
-pub async fn search(stream: &WriteSocket, state: &State, searchtype: SearchType) {
+pub async fn search(
+    stream: &WriteSocket,
+    state: &State,
+    searchtype: SearchType,
+) -> anyhow::Result<()> {
     let state = state.lock().await;
 
     tracing::info!("Searching for {searchtype:?}");
@@ -11,7 +15,6 @@ pub async fn search(stream: &WriteSocket, state: &State, searchtype: SearchType)
         .iter()
         .map(Song::from)
         .collect();
-    let _ = send_to_client(stream, &Response::SearchResults(songs))
-        .await
-        .map_err(|err| tracing::error!("Error: {err}"));
+    send_to_client(stream, &Response::SearchResults(songs)).await?;
+    Ok(())
 }

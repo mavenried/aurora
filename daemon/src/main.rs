@@ -2,8 +2,8 @@ use daemonize::Daemonize;
 use signal_hook::{consts::TERM_SIGNALS, iterator::Signals};
 use std::{
     fs::{File, remove_file},
-    process::exit,
     sync::Arc,
+    vec,
 };
 use tokio::{net::TcpListener, sync::Mutex};
 
@@ -16,20 +16,38 @@ use types::*;
 const PIDFILE: &str = "/tmp/aurora-daemon.pid";
 const OUTFILE: &str = "/tmp/aurora-daemon.out";
 
-#[tokio::main]
-async fn main() -> std::io::Result<()> {
+fn main() -> std::io::Result<()> {
     tracing_subscriber::fmt::init();
 
-    let stdout = File::create(OUTFILE).unwrap();
-    let daemonize = Daemonize::new().pid_file(PIDFILE).stdout(stdout);
+    // daemonize BEFORE tokio runtime starts
+    let daemonize = Daemonize::new()
+        .pid_file(PIDFILE)
+        .stdout(File::create(OUTFILE).unwrap());
 
-    match daemonize.start() {
-        Ok(_) => tracing::info!("Daemon started successfully"),
-        Err(e) => {
-            tracing::error!("Error starting daemon: {}", e);
-            exit(1)
-        }
-    }
+    daemonize.start().expect("Failed to daemonize");
+
+    // now create the runtime
+    let rt = tokio::runtime::Builder::new_multi_thread()
+        .enable_io()
+        .enable_time()
+        .build()
+        .unwrap();
+
+    rt.block_on(async_main())
+}
+
+async fn async_main() -> std::io::Result<()> {
+    let Ok(port) = std::env::args()
+        .nth(1)
+        .unwrap_or_else(|| "4321".to_string())
+        .parse::<u16>()
+    else {
+        tracing::error!("Could not parse port.");
+        std::process::exit(1)
+    };
+
+    tracing::info!("Binding to port {port}.");
+
     std::thread::spawn(move || {
         let mut signals = Signals::new(TERM_SIGNALS).unwrap();
 
@@ -40,17 +58,6 @@ async fn main() -> std::io::Result<()> {
             std::process::exit(0);
         }
     });
-    let Ok(port) = std::env::args()
-        .nth(1)
-        .unwrap_or_else(|| "4400".to_string())
-        .parse::<u16>()
-    else {
-        tracing::error!("Could not parse port.");
-        std::process::exit(1)
-    };
-
-    tracing::info!("Binding to port {port}.");
-
     let Ok(stream_handle) = rodio::OutputStreamBuilder::open_default_stream() else {
         tracing::error!("Could not open a rodio output stream.");
         std::process::exit(1);
@@ -58,11 +65,13 @@ async fn main() -> std::io::Result<()> {
     let sink = rodio::Sink::connect_new(stream_handle.mixer());
 
     helpers::generate_index(&dirs::home_dir().unwrap().join("Music")).await?;
+
     let index = helpers::load_index().await?;
     let state = Arc::new(Mutex::new(StateStruct {
         current_idx: 0,
         current_song: None,
         queue: Vec::new(),
+        clients: vec![],
         index,
         sink: Arc::new(sink),
         audio: None,

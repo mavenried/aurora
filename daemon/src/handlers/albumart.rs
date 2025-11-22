@@ -8,38 +8,37 @@ use crate::{
 };
 use aurora_protocol::Response;
 
-pub async fn albumart(stream: &WriteSocket, state: &State, song_uuid: Uuid) {
+pub async fn albumart(stream: &WriteSocket, state: &State, song_uuid: Uuid) -> anyhow::Result<()> {
     let index = state.lock().await.index.clone();
     let Some(songmeta) = index.get(&song_uuid) else {
-        let _ = send_to_client(
+        send_to_client(
             stream,
             &Response::Error {
                 err_id: 1,
                 err_msg: format!("There this no song with the id `{song_uuid}`"),
             },
         )
-        .await
-        .map_err(|err| tracing::error!("Error: {err}"));
-        return;
+        .await?;
+        return Ok(());
     };
 
     let Ok(tagged_file) = read_from_path(&songmeta.path) else {
-        let _ = send_to_client(
+        send_to_client(
             stream,
             &Response::Error {
                 err_id: 2,
                 err_msg: "Could not open file metadata.".to_string(),
             },
         )
-        .await
-        .map_err(|err| tracing::error!("Error: {err}"));
-        return;
+        .await?;
+        return Ok(());
     };
+
     if let Some(tag) = tagged_file.primary_tag() {
         let picture = &tag.pictures()[0];
         let data = BASE64_URL_SAFE.encode(picture.data());
-        let _ = send_to_client(stream, &Response::Picture(data))
-            .await
-            .map_err(|err| tracing::error!("Error: {err}"));
+        send_to_client(stream, &Response::Picture(data)).await?;
     };
+
+    Ok(())
 }

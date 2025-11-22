@@ -6,64 +6,60 @@ use crate::{
 };
 use aurora_protocol::{PlaylistIn, Response};
 
-pub async fn playlist_create(stream: &WriteSocket, item: PlaylistIn) {
+pub async fn playlist_create(stream: &WriteSocket, item: PlaylistIn) -> anyhow::Result<()> {
     match create_playlist(item).await {
         Ok(name) => {
             tracing::info!("Created playlist {name}.");
-            playlist_list(stream).await;
+            playlist_list(stream).await?;
         }
         Err(err) => {
-            let _ = send_to_client(
+            send_to_client(
                 stream,
                 &Response::Error {
                     err_id: 2,
                     err_msg: err.to_string(),
                 },
             )
-            .await
-            .map_err(|err| tracing::error!("Error: {err}"));
+            .await?;
         }
     }
+    Ok(())
 }
 
-pub async fn playlist_list(stream: &WriteSocket) {
+pub async fn playlist_list(stream: &WriteSocket) -> anyhow::Result<()> {
     match get_all_playlists().await {
         Ok(list) => {
-            let _ = send_to_client(stream, &Response::PlaylistList(list))
-                .await
-                .map_err(|err| tracing::error!("Error: {err}"));
+            send_to_client(stream, &Response::PlaylistList(list)).await?;
         }
         Err(err) => {
-            let _ = send_to_client(
+            send_to_client(
                 stream,
                 &Response::Error {
                     err_id: 2,
                     err_msg: err.to_string(),
                 },
             )
-            .await
-            .map_err(|err| tracing::error!("Error: {err}"));
+            .await?;
         }
     }
+    Ok(())
 }
 
-pub async fn playlist_get(stream: &WriteSocket, id: Uuid) {
+pub async fn playlist_get(stream: &WriteSocket, id: Uuid) -> anyhow::Result<()> {
     match get_playlist(id).await {
         Ok(playlist) => {
-            let _ = send_to_client(stream, &Response::PlaylistResults(playlist))
-                .await
-                .map_err(|err| tracing::error!("Error: {err}"));
+            send_to_client(stream, &Response::PlaylistResults(playlist)).await?;
         }
         Err(err) => {
-            let _ = send_to_client(
+            send_to_client(
                 stream,
                 &Response::Error {
                     err_id: 4,
                     err_msg: err.to_string(),
                 },
             )
-            .await
-            .map_err(|err| tracing::error!("Error: {err}"));
+            .await?;
         }
     }
+    Ok(())
 }
