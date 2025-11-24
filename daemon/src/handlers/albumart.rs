@@ -37,7 +37,14 @@ pub async fn albumart(stream: &WriteSocket, state: &State, song_uuid: Uuid) -> a
     if let Some(tag) = tagged_file.primary_tag() {
         let picture = &tag.pictures()[0];
         let data = BASE64_URL_SAFE.encode(picture.data());
-        send_to_client(stream, &Response::Picture(data)).await?;
+        send_to_client(
+            stream,
+            &Response::Picture {
+                id: song_uuid,
+                data,
+            },
+        )
+        .await?;
     };
 
     Ok(())

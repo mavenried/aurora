@@ -1,12 +1,12 @@
-use aurora_protocol::Request;
-use std::{sync::Arc, time::Duration};
-use tokio::{
-    io::AsyncReadExt,
-    net::{TcpStream, tcp::OwnedReadHalf},
-    sync::Mutex,
-};
+use aurora_protocol::{Request, Response, Song};
+use std::time::Duration;
+use tokio::{io::AsyncReadExt, net::tcp::OwnedReadHalf};
 
-use crate::{handlers::status::status, types::State};
+use crate::{
+    handlers::status::status,
+    helpers::send_to_client,
+    types::{State, WriteSocket},
+};
 
 mod albumart;
 mod clear;
@@ -14,6 +14,7 @@ mod enqueue;
 mod next_prev;
 mod pause;
 mod playlist;
+mod replace_queue;
 mod search;
 mod seek;
 mod status;
@@ -29,18 +30,21 @@ async fn read_request(read: &mut OwnedReadHalf) -> anyhow::Result<Request> {
     Ok(req)
 }
 
-pub async fn handle_client(stream: TcpStream, state: State) -> anyhow::Result<()> {
-    let (mut reader, w) = stream.into_split();
-    let writer = Arc::new(Mutex::new(w));
-
-    {
-        state.lock().await.clients.push(writer.clone());
-    }
-
+pub async fn handle_client(
+    mut reader: OwnedReadHalf,
+    writer: WriteSocket,
+    state: State,
+) -> anyhow::Result<()> {
     {
         let writer = writer.clone();
         let state = state.clone();
         tokio::spawn(async move {
+            let _ = send_to_client(
+                &writer,
+                &Response::Queue(state.lock().await.queue.iter().map(Song::from).collect()),
+            )
+            .await;
+
             loop {
                 std::thread::sleep(Duration::from_millis(500));
                 if status(&writer, &state).await.is_err() {
@@ -49,7 +53,6 @@ pub async fn handle_client(stream: TcpStream, state: State) -> anyhow::Result<()
             }
         });
     }
-
     loop {
         let request = read_request(&mut reader).await?;
         match request {
@@ -57,7 +60,7 @@ pub async fn handle_client(stream: TcpStream, state: State) -> anyhow::Result<()
             Request::PlaylistList => playlist::playlist_list(&writer).await?,
             Request::PlaylistGet(pl_uuid) => playlist::playlist_get(&writer, pl_uuid).await?,
             Request::Search(st) => search::search(&writer, &state, st).await?,
-            Request::Clear => clear::clear(&writer, &state).await?,
+            Request::Clear => clear::clear(&state).await?,
             Request::PlaylistCreate(pl_in) => playlist::playlist_create(&writer, pl_in).await?,
             Request::AlbumArt(song_uuid) => albumart::albumart(&writer, &state, song_uuid).await?,
             Request::Next(n) => next_prev::next(&writer, &state, n).await?,
@@ -65,10 +68,7 @@ pub async fn handle_client(stream: TcpStream, state: State) -> anyhow::Result<()
             Request::Pause => pause::pause(&writer, &state).await?,
             Request::Seek(n) => seek::seek(&writer, &state, n).await?,
             Request::ReplaceQueue(queue) => {
-                clear::clear(&writer, &state).await?;
-                for song in queue {
-                    enqueue::enqueue(&writer, &state, song.id).await?;
-                }
+                replace_queue::replace_queue(&writer, &state, queue).await?
             }
         }
     }

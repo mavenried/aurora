@@ -1,15 +1,14 @@
-use aurora_protocol::Response;
-
-use crate::{helpers::send_to_client, types::*};
+use crate::{handlers::status::status, types::*};
 use std::time::Duration;
 
-pub async fn seek(stream: &WriteSocket, state: &State, n: u64) -> anyhow::Result<()> {
-    let mut state = state.lock().await;
-    if let Some(audio) = &mut state.audio {
-        let current_pos = Duration::from_secs(n);
+pub async fn seek(stream: &WriteSocket, state: &State, n: Duration) -> anyhow::Result<()> {
+    let mut state_locked = state.lock().await;
+    if let Some(audio) = &mut state_locked.audio {
+        let current_pos = n;
         audio.seek(current_pos);
     }
+    drop(state_locked);
+    status(stream, state).await?;
 
-    send_to_client(stream, &Response::Status(state.to_status())).await?;
     Ok(())
 }
