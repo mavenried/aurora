@@ -13,7 +13,7 @@ pub enum Request {
     Next(usize),
     Prev(usize),
     Pause,
-    Seek(u64),
+    Seek(Duration),
     Search(SearchType),
     ReplaceQueue(Vec<Song>),
 }
@@ -23,7 +23,7 @@ pub enum Response {
     Error { err_id: u8, err_msg: String },
     Status(Status),
     SearchResults(Vec<Song>),
-    Picture(String),
+    Picture { id: Uuid, data: String },
     PlaylistResults(Playlist),
     PlaylistList(Vec<PlaylistMinimal>),
     Queue(Vec<Song>),

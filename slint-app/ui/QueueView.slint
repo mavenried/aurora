@@ -1,0 +1,84 @@
+import { NowPlayingView } from "NowPlayingView.slint";
+
+export struct Song {
+    title: string,
+    artists: string,
+    album_art: image,
+    id: string,
+}
+
+component ScrollView inherits Rectangle {
+    in property <length> content-height;
+    in-out property <length> viewport-y <=> touch.viewport-y;
+
+    changed height => {
+        viewport-y = max((self.height - content-height),
+                             min(0px, viewport-y));
+    }
+    changed content-height => {
+        viewport-y = max((self.height - content-height),
+                                     min(0px, viewport-y));
+    }
+
+    touch := TouchArea {
+        width: parent.width;
+        height: parent.height;
+
+        property <length> viewport-y;
+        private property <length> spac: content-height > parent.height ? 0 : parent.height - content-height;
+        scroll-event(event) => {
+            viewport-y = max(-(content-height - parent.height),
+                           min(0px, viewport-y - event.delta-y));
+            return accept;
+        }
+
+        rect := Rectangle {
+            y: touch.viewport-y - spac;
+            width: parent.width;
+            VerticalLayout {
+                VerticalLayout {
+                    @children
+                }
+            }
+        }
+    }
+}
+
+export component QueueView inherits Rectangle {
+    in property <[Song]> queue;
+    callback queue-click(int);
+
+    width: 400px;
+    background: #333;
+    border-radius: 10px;
+    clip: true;
+
+    HorizontalLayout {
+        scroll := ScrollView {
+            content-height: 105px * queue.length - 5px;
+            transform-rotation: 180deg;
+
+            VerticalLayout {
+                spacing: 5px;
+                for item[i] in queue: NowPlayingView {
+                    transform-rotation: 180deg;
+                    Artists: item.artists;
+                    AlbumArt: item.album_art;
+                    Title: item.title;
+                    border-radius: 0px;
+                    background: touch.has-hover ? #444 : #333;
+                    animate background { duration: 200ms; }
+                    touch := TouchArea {
+                        width: parent.width;
+                        height: parent.height;
+
+                        clicked => {
+                            queue-click(i);
+                            scroll.viewport-y = 0;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

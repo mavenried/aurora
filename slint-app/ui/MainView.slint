@@ -1,0 +1,9 @@
+export component MainView inherits Rectangle {
+    background: #333;
+    border-radius: 10px;
+    in property <string> active-view;
+
+    Text {
+        text: active-view;
+    }
+}

@@ -1,0 +1,81 @@
+import { QueueView, Song } from "QueueView.slint";
+import { TabSelectorView } from "TabSelectorView.slint";
+import { MainView } from "MainView.slint";
+import { NowPlayingView } from "NowPlayingView.slint";
+import { PlayerView } from "PlayerView.slint";
+import "../assets/NotoSansJP-Regular.ttf";
+
+export struct CurrentSong {
+    title: string,
+    artists: string,
+    position: int,
+    duration: int,
+    is_paused: bool,
+    song_uuid: string,
+    album_art: image,
+}
+
+export component AuroraPlayer inherits Window {
+    callback queue-click(int);
+
+    in-out property <CurrentSong> currentSong:  {
+        title: "Nothing Playing",
+        artists: "No artist",
+        album_art: @image-url("../assets/placeholder.jpg")
+    };
+
+    in-out property <[Song]> queue;
+
+    in-out property <string> active-view: "Search";
+
+    default-font-family: "Noto Sans JP";
+
+    title: "Aurora Player";
+    min-height: 650px;
+    min-width: 1155px;
+    preferred-height: 800px;
+    preferred-width: 1422px;
+
+    Rectangle {
+        background: #111;
+        HorizontalLayout {
+            spacing: 5px;
+            padding: 5px;
+            VerticalLayout {
+                spacing: 5px;
+
+                TabSelectorView {
+                    active-view <=> root.active-view;
+                }
+
+                QueueView {
+                    queue: root.queue;
+                    queue-click(n) => {
+                        root.queue-click(n)
+                    }
+                }
+
+                VerticalLayout {
+                    NowPlayingView {
+                        Title: currentSong.title;
+                        Artists: currentSong.artists;
+                        AlbumArt: currentSong.album-art;
+
+                        width: 400px;
+                        height: 100px;
+                    }
+                }
+            }
+
+            VerticalLayout {
+                spacing: 5px;
+
+                MainView {
+                    active-view: root.active-view;
+                }
+
+                PlayerView { }
+            }
+        }
+    }
+}
