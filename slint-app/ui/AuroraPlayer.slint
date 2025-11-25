@@ -3,26 +3,24 @@ import { TabSelectorView } from "TabSelectorView.slint";
 import { MainView } from "MainView.slint";
 import { NowPlayingView } from "NowPlayingView.slint";
 import { PlayerView } from "PlayerView.slint";
+import { CurrentSong } from "Types.slint";
 import "../assets/NotoSansJP-Regular.ttf";
 
-export struct CurrentSong {
-    title: string,
-    artists: string,
-    position: int,
-    duration: int,
-    is_paused: bool,
-    song_uuid: string,
-    album_art: image,
-}
+
 
 export component AuroraPlayer inherits Window {
     callback queue-click(int);
+    callback prev();
+    callback pause();
+    callback next();
+    callback seek(float);
 
-    in-out property <CurrentSong> currentSong:  {
-        title: "Nothing Playing",
-        artists: "No artist",
-        album_art: @image-url("../assets/placeholder.jpg")
-    };
+    in-out property <string> Title: "Nothing Playing";
+    in-out property <string> Artists: "No artist";
+    in-out property <image> AlbumArt: @image-url("../assets/placeholder.jpg");
+    in-out property <int> position: 0;
+    in-out property <bool> is_paused: true;
+    in-out property <int> duration: 0;
 
     in-out property <[Song]> queue;
 
@@ -57,9 +55,9 @@ export component AuroraPlayer inherits Window {
 
                 VerticalLayout {
                     NowPlayingView {
-                        Title: currentSong.title;
-                        Artists: currentSong.artists;
-                        AlbumArt: currentSong.album-art;
+                        Title: root.Title;
+                        Artists: root.Artists;
+                        AlbumArt: root.AlbumArt;
 
                         width: 400px;
                         height: 100px;
@@ -74,7 +72,24 @@ export component AuroraPlayer inherits Window {
                     active-view: root.active-view;
                 }
 
-                PlayerView { }
+                PlayerView {
+                    pause => {
+                        root.pause()
+                    }
+                    next => {
+                        root.next()
+                    }
+                    prev => {
+                        root.prev()
+                    }
+                    seek(value) => {
+                        seek(value);
+                        debug(value);
+                    }
+                    value <=> position;
+                    duration: root.duration;
+                    is-paused: root.is_paused;
+                }
             }
         }
     }

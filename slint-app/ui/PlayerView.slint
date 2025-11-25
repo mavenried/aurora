@@ -1,5 +1,81 @@
+import { Slider, VerticalBox, HorizontalBox } from "std-widgets.slint";
+import { CustomSlider } from "CustomComp.slint";
+
 export component PlayerView inherits Rectangle {
     height: 100px;
     background: #333;
     border-radius: 10px;
+
+    in-out property <int> value;
+    in property <int> duration;
+    in property <bool> is-paused;
+
+    callback prev();
+    callback pause();
+    callback next();
+    callback seek(float);
+
+    VerticalLayout {
+        padding: 5px;
+        spacing: 0px;
+        HorizontalLayout {
+            alignment: LayoutAlignment.center;
+            padding: 10px;
+            Image {
+                source: @image-url("../assets/prev.png");
+                width: 50px;
+                height: 50px;
+                TouchArea {
+                    height: parent.height;
+                    width: parent.width;
+                    clicked => {
+                        prev()
+                    }
+                }
+            }
+
+            Image {
+                source: is-paused ? @image-url("../assets/play.png") : @image-url("../assets/pause.png");
+                width: 50px;
+                height: 50px;
+                TouchArea {
+                    height: parent.height;
+                    width: parent.width;
+                    clicked => {
+                        pause()
+                    }
+                }
+            }
+
+            Image {
+                source: @image-url("../assets/next.png");
+                width: 50px;
+                height: 50px;
+                TouchArea {
+                    height: parent.height;
+                    width: parent.width;
+                    clicked => {
+                        next()
+                    }
+                }
+            }
+        }
+
+        VerticalBox {
+            alignment: LayoutAlignment.start;
+            padding: 0px;
+            padding-left: 20px;
+            padding-right: 20px;
+            CustomSlider {
+                height: 10px;
+                minimum: 0;
+                enabled: root.duration != 0;
+                value <=> root.value;
+                maximum: root.duration;
+                released(value) => {
+                    seek(value)
+                }
+            }
+        }
+    }
 }

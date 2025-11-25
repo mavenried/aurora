@@ -1,0 +1,82 @@
+import { HorizontalBox } from "std-widgets.slint";
+export component CustomSlider inherits Rectangle {
+
+    in property <bool> enabled: true;
+    in property <int> minimum: 0;
+    in-out property <int> value: 50;
+    in property <int> maximum: 100;
+    in property <int> step: 1000;
+    callback released(float);
+
+    private property <float> normalized-value: (value - minimum) / (maximum - minimum);
+
+    height: 40px;
+
+    track := Rectangle {
+        y: (parent.height - self.height) / 2;
+        height: 6px;
+        background: #444;
+        border-radius: 3px;
+        fill := HorizontalBox {
+            alignment: LayoutAlignment.start;
+            padding: 0px;
+            width: track.width;
+            Rectangle {
+                width: track.width * root.normalized-value;
+                background: #689D6A;
+                border-radius: track.border-radius;
+                animate background { duration: 150ms; }
+            }
+        }
+    }
+
+    touch := TouchArea {
+        enabled: root.enabled;
+
+        pointer-event(event) => {
+            if (event.kind == PointerEventKind.down || event.kind == PointerEventKind.move) {
+                if (self.pressed) {
+                    root.value = root.minimum + (root.maximum - root.minimum) * clamp(self.mouse-x / root.width, 0, 1);
+                }
+            }
+            if (event.kind == PointerEventKind.up) {
+                root.released(root.value);
+            }
+        }
+    }
+
+    focus-scope := FocusScope {
+        enabled: root.enabled;
+
+        key-pressed(event) => {
+            if (event.text == Key.LeftArrow) {
+                root.value = max(root.minimum, root.value - root.step);
+                root.released(root.value);
+                return accept;
+            }
+            if (event.text == Key.RightArrow) {
+                root.value = min(root.maximum, root.value + root.step);
+                root.released(root.value);
+                return accept;
+            }
+            if (event.text == Key.Home) {
+                root.value = root.minimum;
+                root.released(root.value);
+                return accept;
+            }
+            if (event.text == Key.End) {
+                root.value = root.maximum;
+                root.released(root.value);
+                return accept;
+            }
+            return reject;
+        }
+
+        key-released(event) => {
+            if (event.text == Key.LeftArrow || event.text == Key.RightArrow || event.text == Key.Home || event.text == Key.End) {
+                return accept;
+            }
+            return reject;
+        }
+    }
+}

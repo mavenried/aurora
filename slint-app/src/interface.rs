@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
 use aurora_protocol::{Request, Response};
 use base64::{Engine, prelude::BASE64_URL_SAFE};
@@ -13,7 +13,7 @@ use tokio::{
 };
 
 use crate::{
-    AuroraPlayer, CurrentSong, DEFAULT_ART,
+    AuroraPlayer, DEFAULT_ART,
     types::{ImageCache, State, StateStruct},
 };
 
@@ -76,40 +76,37 @@ async fn tcp_recver(
 
                 let _ = app.upgrade_in_event_loop(move |aurora| {
                     let album_art = Image::from_rgba8(buffer);
-                    aurora.set_currentSong(CurrentSong {
-                        title: status
+                    aurora.set_Title(
+                        status
                             .current_song
                             .as_ref()
                             .map(|s| s.title.as_str())
                             .unwrap_or("Nothing Playing")
                             .into(),
+                    );
 
-                        artists: status
+                    aurora.set_Artists(
+                        status
                             .current_song
                             .as_ref()
                             .map(|s| s.artists.join(", "))
                             .unwrap_or_else(|| "No Artist".into())
                             .into(),
+                    );
 
-                        song_uuid: status
-                            .current_song
-                            .as_ref()
-                            .map(|s| s.id.to_string())
-                            .unwrap_or_else(|| "None".into())
-                            .into(),
-
-                        duration: status
+                    aurora.set_duration(
+                        status
                             .current_song
                             .as_ref()
                             .map(|s| s.duration.as_millis() as i32)
                             .unwrap_or(0),
+                    );
 
-                        album_art,
+                    aurora.set_AlbumArt(album_art);
 
-                        is_paused: status.is_paused,
+                    aurora.set_is_paused(status.is_paused);
 
-                        position: status.position.as_millis() as i32,
-                    });
+                    aurora.set_position(status.position.as_millis() as i32);
                 });
             }
 
@@ -147,16 +144,52 @@ pub async fn interface(app: slint::Weak<AuroraPlayer>) -> anyhow::Result<()> {
     }));
 
     let state_clone = state.clone();
-    let _ = app.upgrade().unwrap().on_queue_click(move |n| {
-        tracing::info!("{n}");
+    let _ = app.upgrade_in_event_loop(move |aurora: AuroraPlayer| {
         let state = state_clone.clone();
-        tokio::spawn(async move {
-            let _ = state
-                .lock()
-                .await
-                .writer_tx
-                .send(Request::Next((n + 1) as usize))
-                .await;
+        aurora.on_queue_click(move |n| {
+            let state = state.clone();
+            tokio::spawn(async move {
+                let _ = state
+                    .lock()
+                    .await
+                    .writer_tx
+                    .send(Request::Next((n + 1) as usize))
+                    .await;
+            });
+        });
+
+        let state = state_clone.clone();
+        aurora.on_next(move || {
+            let state = state.clone();
+            tokio::spawn(async move {
+                let _ = state.lock().await.writer_tx.send(Request::Next(1)).await;
+            });
+        });
+        let state = state_clone.clone();
+        aurora.on_prev(move || {
+            let state = state.clone();
+            tokio::spawn(async move {
+                let _ = state.lock().await.writer_tx.send(Request::Prev(1)).await;
+            });
+        });
+        let state = state_clone.clone();
+        aurora.on_pause(move || {
+            let state = state.clone();
+            tokio::spawn(async move {
+                let _ = state.lock().await.writer_tx.send(Request::Pause).await;
+            });
+        });
+        let state = state_clone.clone();
+        aurora.on_seek(move |value| {
+            let state = state.clone();
+            tokio::spawn(async move {
+                let _ = state
+                    .lock()
+                    .await
+                    .writer_tx
+                    .send(Request::Seek(Duration::from_millis(value as u64)))
+                    .await;
+            });
         });
     });
 
