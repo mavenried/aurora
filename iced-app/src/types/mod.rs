@@ -6,9 +6,7 @@ use lru::LruCache;
 use uuid::Uuid;
 
 mod tcp;
-mod virtuallist;
 pub use tcp::*;
-use virtuallist::*;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum MainView {
