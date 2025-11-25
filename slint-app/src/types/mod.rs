@@ -3,7 +3,7 @@ use std::{num::NonZero, sync::Arc};
 use aurora_protocol::{Request, Song};
 use lru::LruCache;
 use slint::{Rgba8Pixel, SharedPixelBuffer};
-use tokio::sync::{mpsc::Sender, Mutex};
+use tokio::sync::{Mutex, mpsc::Sender};
 use uuid::Uuid;
 
 mod helpers;
@@ -15,10 +15,11 @@ impl ImageCache {
         Self(LruCache::new(NonZero::<usize>::new(400).unwrap()))
     }
     pub fn get(&mut self, id: Uuid) -> Option<SharedPixelBuffer<Rgba8Pixel>> {
-        match self.0.get(&id) {
-            Some(buf) => Some(buf.clone()),
-            None => None,
-        }
+        self.0.get(&id).cloned()
+        //match self.0.get(&id) {
+        //    Some(buf) => Some(buf.clone()),
+        //    None => None,
+        //}
     }
     pub fn put(&mut self, id: Uuid, buf: SharedPixelBuffer<Rgba8Pixel>) {
         self.0.put(id, buf);

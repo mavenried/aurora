@@ -6,8 +6,6 @@ import { PlayerView } from "PlayerView.slint";
 import { CurrentSong } from "Types.slint";
 import "../assets/NotoSansJP-Regular.ttf";
 
-
-
 export component AuroraPlayer inherits Window {
     callback queue-click(int);
     callback prev();
@@ -26,13 +24,14 @@ export component AuroraPlayer inherits Window {
 
     in-out property <string> active-view: "Search";
 
-    default-font-family: "Noto Sans JP";
-
     title: "Aurora Player";
+
     min-height: 650px;
     min-width: 1155px;
     preferred-height: 800px;
     preferred-width: 1422px;
+
+    default-font-family: "Noto Sans JP";
 
     Rectangle {
         background: #111;
