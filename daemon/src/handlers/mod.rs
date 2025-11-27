@@ -1,3 +1,4 @@
+use anyhow::Ok;
 use aurora_protocol::{Request, Response, Song};
 use std::time::Duration;
 use tokio::{io::AsyncReadExt, net::tcp::OwnedReadHalf};
@@ -55,21 +56,23 @@ pub async fn handle_client(
     }
     loop {
         let request = read_request(&mut reader).await?;
-        match request {
-            Request::Play(song_uuid) => enqueue::enqueue(&writer, &state, song_uuid).await?,
-            Request::PlaylistList => playlist::playlist_list(&writer).await?,
-            Request::PlaylistGet(pl_uuid) => playlist::playlist_get(&writer, pl_uuid).await?,
-            Request::Search(st) => search::search(&writer, &state, st).await?,
-            Request::Clear => clear::clear(&state).await?,
-            Request::PlaylistCreate(pl_in) => playlist::playlist_create(&writer, pl_in).await?,
-            Request::AlbumArt(song_uuid) => albumart::albumart(&writer, &state, song_uuid).await?,
-            Request::Next(n) => next_prev::next(&writer, &state, n).await?,
-            Request::Prev(n) => next_prev::prev(&writer, &state, n).await?,
-            Request::Pause => pause::pause(&writer, &state).await?,
-            Request::Seek(n) => seek::seek(&writer, &state, n).await?,
+        if let Err(err) = match request {
+            Request::Play(song_uuid) => enqueue::enqueue(&writer, &state, song_uuid).await,
+            Request::PlaylistList => playlist::playlist_list(&writer).await,
+            Request::PlaylistGet(pl_uuid) => playlist::playlist_get(&writer, pl_uuid).await,
+            Request::Search(st) => search::search(&writer, &state, st).await,
+            Request::Clear => clear::clear(&state).await,
+            Request::PlaylistCreate(pl_in) => playlist::playlist_create(&writer, pl_in).await,
+            Request::AlbumArt(song_uuid) => albumart::albumart(&writer, &state, song_uuid).await,
+            Request::Next(n) => next_prev::next(&writer, &state, n).await,
+            Request::Prev(n) => next_prev::prev(&writer, &state, n).await,
+            Request::Pause => pause::pause(&writer, &state).await,
+            Request::Seek(n) => seek::seek(&writer, &state, n).await,
             Request::ReplaceQueue(queue) => {
-                replace_queue::replace_queue(&writer, &state, queue).await?
+                replace_queue::replace_queue(&writer, &state, queue).await
             }
+        } {
+            tracing::error!("Err: {err}");
         }
     }
 }
