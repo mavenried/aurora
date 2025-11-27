@@ -117,13 +117,14 @@ async fn tcp_recver(
                 state.queue = queue;
                 state.update_queue(app.clone()).await;
             }
-            Response::SearchResults(results) => {
-                tracing::info!("Received: SearchResults");
-                if results.len() < 300 {
-                    let mut state = state.lock().await;
-                    state.search_results = results;
-                    state.update_search_results(app.clone()).await;
+            Response::SearchResults(mut results) => {
+                tracing::info!("Received: SearchResults, len:{}", results.len());
+                if results.len() > 300 {
+                    results = results[..300].to_vec();
                 }
+                let mut state = state.lock().await;
+                state.search_results = results;
+                state.update_search_results(app.clone()).await;
             }
             Response::Picture { id, data } => {
                 tracing::info!("Received: Picture");
@@ -199,16 +200,30 @@ pub async fn interface(app: slint::Weak<AuroraPlayer>) -> anyhow::Result<()> {
             });
         });
         let state = state_clone.clone();
+        aurora.on_queue_remove(move |n| {
+            let state = state.clone();
+            tokio::spawn(async move {
+                let state = state.lock().await;
+                let mut queue = state.queue.clone();
+                queue.remove((state.cur_idx + n as usize + 1) % queue.len());
+                let req = Request::ReplaceQueue(queue);
+                let _ = state.writer_tx.send(req).await;
+            });
+        });
+
+        let state = state_clone.clone();
         aurora.on_search(move |q, m| {
             let state = state.clone();
-            let query = if m == "By Artist" {
-                Request::Search(SearchType::ByArtist(q.to_string()))
-            } else {
-                Request::Search(SearchType::ByTitle(q.to_string()))
-            };
-            tokio::spawn(async move {
-                let _ = state.lock().await.writer_tx.send(query).await;
-            });
+            if !q.is_empty() {
+                let query = if m == "By Artist" {
+                    Request::Search(SearchType::ByArtist(q.to_string()))
+                } else {
+                    Request::Search(SearchType::ByTitle(q.to_string()))
+                };
+                tokio::spawn(async move {
+                    let _ = state.lock().await.writer_tx.send(query).await;
+                });
+            }
         });
 
         let state = state_clone.clone();

@@ -6,6 +6,7 @@ import { ScrollView } from "CustomComp.slint";
 export component QueueView inherits Rectangle {
     in property <[Song]> queue;
     callback queue-click(int);
+    callback queue-remove(int);
 
     width: 400px;
     background: #333;
@@ -30,10 +31,13 @@ export component QueueView inherits Rectangle {
                     touch := TouchArea {
                         width: parent.width;
                         height: parent.height;
-
-                        clicked => {
-                            queue-click(i);
                             //scroll.viewport-y = 0;
+                        pointer-event(event) => {
+                            if event.button == PointerEventButton.right && event.kind == PointerEventKind.down {
+                                queue-remove(i);
+                            } else if event.button == PointerEventButton.left && event.kind == PointerEventKind.down {
+                                queue-click(i);
+                            }
                         }
                     }
                 }

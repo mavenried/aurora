@@ -8,6 +8,7 @@ import "../assets/NotoSansJP-Regular.ttf";
 
 export component AuroraPlayer inherits Window {
     callback queue-click(int);
+    callback queue-remove(int);
     callback prev();
     callback pause();
     callback next();
@@ -17,7 +18,7 @@ export component AuroraPlayer inherits Window {
 
     in-out property <string> Title: "Nothing Playing";
     in-out property <string> Artists: "No artist";
-    in-out property <image> AlbumArt: @image-url("../assets/placeholder.jpg");
+    in-out property <image> AlbumArt: @image-url("../assets/placeholder.png");
     in-out property <int> position: 0;
     in-out property <bool> is_paused: true;
     in-out property <int> duration: 0;
@@ -52,6 +53,9 @@ export component AuroraPlayer inherits Window {
                     queue: root.queue;
                     queue-click(n) => {
                         root.queue-click(n)
+                    }
+                    queue-remove(n) => {
+                        root.queue-remove(n)
                     }
                 }
 

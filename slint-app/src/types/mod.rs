@@ -19,7 +19,7 @@ pub enum ImageFor {
 pub struct ImageCache(LruCache<Uuid, SharedPixelBuffer<Rgba8Pixel>>);
 impl ImageCache {
     pub fn new() -> Self {
-        Self(LruCache::new(NonZero::<usize>::new(400).unwrap()))
+        Self(LruCache::new(NonZero::<usize>::new(500).unwrap()))
     }
     pub fn get(&mut self, id: Uuid) -> Option<SharedPixelBuffer<Rgba8Pixel>> {
         self.0.get(&id).cloned()
