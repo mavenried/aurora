@@ -1,9 +1,72 @@
+import { VerticalBox, HorizontalBox } from "std-widgets.slint";
+import { ComboBox, List } from "CustomComp.slint";
+import { Song }from "Types.slint";
+
+export component SearchView inherits VerticalBox {
+    in-out property <string> searchMode: "By Title";
+    in-out property <string> query: "";
+    in property <[Song]> searchResults;
+    callback submit(string, string);
+    callback item-clicked(string);
+
+    VerticalLayout {
+        transform-rotation: 180deg;
+        spacing: 5px;
+        List {
+            transform-rotation: 180deg;
+            items: searchResults;
+            item-clicked(id) => {
+                item-clicked(id);
+            }
+        }
+
+        HorizontalLayout {
+            transform-rotation: 180deg;
+            spacing: 5px;
+            Rectangle {
+                border-radius: 10px;
+                height: 50px;
+                background: #222;
+                HorizontalBox {
+                    padding: 10px;
+                    TextInput {
+                        font-size: 20px;
+                        vertical-alignment: center;
+                        color: #eee;
+                        text <=> query;
+                        accepted => {
+                            submit(query, searchMode);
+                        }
+                    }
+                }
+            }
+
+            ComboBox {
+                model: ["By Artist", "By Title"];
+                current <=> searchMode;
+            }
+        }
+    }
+}
+
 export component MainView inherits Rectangle {
     background: #333;
     border-radius: 10px;
     in property <string> active-view;
+    in property <[Song]> searchResults;
+    in property <bool> searchOverflow;
+    callback query-submit(string, string);
+    callback add(string);
 
-    Text {
-        text: active-view;
+    SearchView {
+        visible: active-view == "Search";
+        searchResults: root.searchResults;
+        submit(q, m) => {
+            query-submit(q, m);
+            debug(q, m);
+        }
+        item-clicked(id) => {
+            add(id);
+        }
     }
 }

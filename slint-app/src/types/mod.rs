@@ -7,7 +7,14 @@ use tokio::sync::{Mutex, mpsc::Sender};
 use uuid::Uuid;
 
 mod helpers;
+
 pub type State = Arc<Mutex<StateStruct>>;
+
+pub enum ImageFor {
+    Queue(Uuid),
+    Search(Uuid),
+    Playlist(Uuid),
+}
 
 pub struct ImageCache(LruCache<Uuid, SharedPixelBuffer<Rgba8Pixel>>);
 impl ImageCache {
@@ -16,10 +23,6 @@ impl ImageCache {
     }
     pub fn get(&mut self, id: Uuid) -> Option<SharedPixelBuffer<Rgba8Pixel>> {
         self.0.get(&id).cloned()
-        //match self.0.get(&id) {
-        //    Some(buf) => Some(buf.clone()),
-        //    None => None,
-        //}
     }
     pub fn put(&mut self, id: Uuid, buf: SharedPixelBuffer<Rgba8Pixel>) {
         self.0.put(id, buf);
@@ -31,6 +34,9 @@ pub struct StateStruct {
     pub artcache: ImageCache,
     pub writer_tx: Sender<Request>,
     pub queue: Vec<Song>,
-    pub waiting_for_art: Vec<Uuid>,
+    pub queue_waitlist: Vec<Uuid>,
+    pub search_waitlist: Vec<Uuid>,
+    pub playlist_waitlist: Vec<Uuid>,
     pub cur_idx: usize,
+    pub search_results: Vec<Song>,
 }

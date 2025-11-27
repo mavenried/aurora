@@ -1,6 +1,6 @@
 use std::{sync::Arc, time::Duration};
 
-use aurora_protocol::{Request, Response};
+use aurora_protocol::{Request, Response, SearchType};
 use base64::{Engine, prelude::BASE64_URL_SAFE};
 use slint::{Image, Rgba8Pixel, SharedPixelBuffer};
 use tokio::{
@@ -14,7 +14,7 @@ use tokio::{
 
 use crate::{
     AuroraPlayer, DEFAULT_ART,
-    types::{ImageCache, State, StateStruct},
+    types::{ImageCache, ImageFor, State, StateStruct},
 };
 
 pub fn album_art_from_data(data: &[u8]) -> anyhow::Result<SharedPixelBuffer<Rgba8Pixel>> {
@@ -35,6 +35,7 @@ async fn tcp_sender(mut writer: OwnedWriteHalf, mut rx: Receiver<Request>) -> an
                 let len = (encoded.len() as u32).to_be_bytes();
                 writer.write_all(&len).await?;
                 writer.write_all(encoded.as_bytes()).await?;
+                tracing::info!("Sent: {encoded}");
             }
             None => {
                 tracing::info!("Writer channel closed.");
@@ -62,7 +63,7 @@ async fn tcp_recver(
             Response::Status(status) => {
                 let mut state_locked = state.lock().await;
                 let buffer = if let Some(s) = &status.current_song {
-                    state_locked.get_album_art(s.id).await
+                    state_locked.get_album_art(ImageFor::Queue(s.id)).await
                 } else {
                     state_locked.default_art_buffer.clone()
                 };
@@ -111,17 +112,32 @@ async fn tcp_recver(
             }
 
             Response::Queue(queue) => {
+                tracing::info!("Received: Queue");
                 let mut state = state.lock().await;
                 state.queue = queue;
                 state.update_queue(app.clone()).await;
             }
+            Response::SearchResults(results) => {
+                tracing::info!("Received: SearchResults");
+                if results.len() < 300 {
+                    let mut state = state.lock().await;
+                    state.search_results = results;
+                    state.update_search_results(app.clone()).await;
+                }
+            }
             Response::Picture { id, data } => {
+                tracing::info!("Received: Picture");
                 let decoded = BASE64_URL_SAFE.decode(data).unwrap();
                 let buf = album_art_from_data(decoded.as_slice()).unwrap();
 
                 let mut state = state.lock().await;
                 state.artcache.put(id, buf);
-                state.update_queue(app.clone()).await;
+                if state.search_waitlist.contains(&id) {
+                    state.update_search_results(app.clone()).await;
+                } else if state.queue_waitlist.contains(&id) {
+                    state.update_queue(app.clone()).await;
+                } else if state.playlist_waitlist.contains(&id) {
+                }
             }
             _ => (),
         }
@@ -139,7 +155,10 @@ pub async fn interface(app: slint::Weak<AuroraPlayer>) -> anyhow::Result<()> {
         artcache: ImageCache::new(),
         writer_tx: tx,
         queue: vec![],
-        waiting_for_art: vec![],
+        search_results: vec![],
+        queue_waitlist: vec![],
+        search_waitlist: vec![],
+        playlist_waitlist: vec![],
         cur_idx: 0,
     }));
 
@@ -180,6 +199,28 @@ pub async fn interface(app: slint::Weak<AuroraPlayer>) -> anyhow::Result<()> {
             });
         });
         let state = state_clone.clone();
+        aurora.on_search(move |q, m| {
+            let state = state.clone();
+            let query = if m == "By Artist" {
+                Request::Search(SearchType::ByArtist(q.to_string()))
+            } else {
+                Request::Search(SearchType::ByTitle(q.to_string()))
+            };
+            tokio::spawn(async move {
+                let _ = state.lock().await.writer_tx.send(query).await;
+            });
+        });
+
+        let state = state_clone.clone();
+        aurora.on_add(move |id| {
+            let state = state.clone();
+            let id = uuid::Uuid::parse_str(&id).unwrap();
+            tokio::spawn(async move {
+                let _ = state.lock().await.writer_tx.send(Request::Play(id)).await;
+            });
+        });
+
+        let state = state_clone.clone();
         aurora.on_seek(move |value| {
             let state = state.clone();
             tokio::spawn(async move {
@@ -193,7 +234,17 @@ pub async fn interface(app: slint::Weak<AuroraPlayer>) -> anyhow::Result<()> {
         });
     });
 
-    tokio::spawn(tcp_sender(writer, rx));
-    tokio::spawn(tcp_recver(reader, state.clone(), app));
+    tokio::spawn(async move {
+        if let Err(err) = tcp_sender(writer, rx).await {
+            tracing::error!("Sender Error: {err}");
+        }
+    });
+
+    tokio::spawn(async move {
+        if let Err(err) = tokio::spawn(tcp_recver(reader, state.clone(), app)).await {
+            tracing::error!("Receiver Error: {err}");
+        }
+    });
+
     Ok(())
 }

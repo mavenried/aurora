@@ -1,9 +1,9 @@
-import { QueueView, Song } from "QueueView.slint";
+import { QueueView } from "QueueView.slint";
 import { TabSelectorView } from "TabSelectorView.slint";
 import { MainView } from "MainView.slint";
 import { NowPlayingView } from "NowPlayingView.slint";
 import { PlayerView } from "PlayerView.slint";
-import { CurrentSong } from "Types.slint";
+import { CurrentSong, Song } from "Types.slint";
 import "../assets/NotoSansJP-Regular.ttf";
 
 export component AuroraPlayer inherits Window {
@@ -12,6 +12,8 @@ export component AuroraPlayer inherits Window {
     callback pause();
     callback next();
     callback seek(float);
+    callback search(string, string);
+    callback add(string);
 
     in-out property <string> Title: "Nothing Playing";
     in-out property <string> Artists: "No artist";
@@ -21,6 +23,7 @@ export component AuroraPlayer inherits Window {
     in-out property <int> duration: 0;
 
     in-out property <[Song]> queue;
+    in-out property <[Song]> searchResults;
 
     in-out property <string> active-view: "Search";
 
@@ -34,7 +37,7 @@ export component AuroraPlayer inherits Window {
     default-font-family: "Noto Sans JP";
 
     Rectangle {
-        background: #111;
+        background: #689d6a;
         HorizontalLayout {
             spacing: 5px;
             padding: 5px;
@@ -69,6 +72,13 @@ export component AuroraPlayer inherits Window {
 
                 MainView {
                     active-view: root.active-view;
+                    searchResults: root.searchResults;
+                    query-submit(q, e) => {
+                        search(q, e);
+                    }
+                    add(s) => {
+                        root.add(s);
+                    }
                 }
 
                 PlayerView {

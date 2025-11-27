@@ -1,4 +1,44 @@
-import { HorizontalBox } from "std-widgets.slint";
+import { HorizontalBox, VerticalBox } from "std-widgets.slint";
+import { Song } from "Types.slint";
+
+export component ScrollView inherits Rectangle {
+    in property <length> content-height;
+    in-out property <length> viewport-y <=> touch.viewport-y;
+    in property <int> direction: 1;
+
+    changed height => {
+        viewport-y = max((self.height - content-height),
+                             min(0px, viewport-y));
+    }
+    changed content-height => {
+        viewport-y = max((self.height - content-height),
+                                     min(0px, viewport-y));
+    }
+
+    touch := TouchArea {
+        width: parent.width;
+        height: parent.height;
+
+        property <length> viewport-y;
+        private property <length> spac: content-height > parent.height ? 0 : parent.height - content-height;
+        scroll-event(event) => {
+            viewport-y = max(-(content-height - parent.height),
+                           min(0px, viewport-y - (root.direction * event.delta-y)));
+            return accept;
+        }
+
+        rect := Rectangle {
+            y: touch.viewport-y - spac;
+            width: parent.width;
+            VerticalLayout {
+                VerticalLayout {
+                    @children
+                }
+            }
+        }
+    }
+}
+
 export component CustomSlider inherits Rectangle {
 
     in property <bool> enabled: true;
@@ -77,6 +117,144 @@ export component CustomSlider inherits Rectangle {
                 return accept;
             }
             return reject;
+        }
+    }
+}
+
+export component ComboBox {
+    in-out property <[string]> model;
+    in-out property <string> current;
+    private property <bool> expanded: false;
+    width: 160px;
+    height: 50px;
+
+    Rectangle {
+        width: parent.width;
+        height: parent.height;
+        background: #222;
+        border-radius: 10px;
+        TouchArea {
+            width: parent.width;
+            height: parent.height;
+            clicked => {
+                root.expanded = !root.expanded;
+            }
+        }
+
+        HorizontalLayout {
+            padding: 10px;
+            Text {
+                text: root.current;
+                vertical-alignment: center;
+                font-size: 20px;
+                color: #eee;
+            }
+
+            Text {
+                text: root.expanded ? "▲" : "▼";
+                horizontal-alignment: right;
+                vertical-alignment: center;
+                color: #eee;
+            }
+        }
+    }
+
+    if expanded: Rectangle {
+        background: #222;
+        border-width: 1px;
+        border-color: #689d6a;
+        y: parent.height + 5px;
+        height: model.length * 50px + 15px;
+        border-radius: 10px;
+        VerticalLayout {
+            spacing: 5px;
+            padding: 5px;
+            width: parent.width;
+            for item[i] in model: Rectangle {
+                width: parent.width - 10px;
+                border-radius: 10px;
+                height: 50px;
+
+                background: item == root.current ? #333 : #222;
+                TouchArea {
+                    width: parent.width;
+                    height: parent.height;
+                    clicked => {
+                        root.current = item;
+                        root.expanded = false;
+                    }
+                }
+
+                HorizontalBox {
+                    padding: 10px;
+                    Text {
+                        text: item;
+                        vertical-alignment: center;
+                        font-size: 15px;
+                        color: #eee;
+                    }
+                }
+            }
+        }
+    }
+}
+
+export component List inherits VerticalLayout {
+    in property <[Song]> items;
+    callback item-clicked(string);
+    Rectangle {
+        border-radius: 10px;
+        clip: true;
+        ScrollView {
+            content-height: 65px * items.length - 5px;
+            direction: -1;
+            box := VerticalBox {
+                spacing: 5px;
+                padding: 0px;
+                for item[i] in items: Rectangle {
+                    border-radius: 10px;
+                    background: touch.has-hover ? #444 : #333;
+                    animate background { duration: 100ms; }
+                    touch := TouchArea {
+                        clicked => {
+                            item-clicked(item.id);
+                        }
+                    }
+
+                    HorizontalLayout {
+                        padding: 5px;
+                        padding-right: 20px;
+                        spacing: 10px;
+                        Rectangle {
+                            height: 50px;
+                            width: 50px;
+                            border-radius: 10px;
+                            clip: true;
+                            Image {
+                                source: item.album_art;
+                                height: parent.width;
+                                width: parent.height;
+                            }
+                        }
+
+                        Text {
+                            text: item.title;
+                            color: #eee;
+                            font-size: 20px;
+                            vertical-alignment: center;
+                            horizontal-alignment: left;
+                        }
+
+                        Text {
+                            text: item.artists;
+                            color: #aaa;
+                            font-size: 15px;
+                            vertical-alignment: center;
+                            horizontal-alignment: right;
+                        }
+                    }
+                }
+            }
         }
     }
 }

@@ -3,7 +3,7 @@ export component Button inherits Rectangle {
     in property <string> label;
     VerticalLayout {
         Rectangle {
-            background: active == label ? #333 : #111;
+            background: active == label ? #333 : #222;
             animate background { duration: 100ms; }
             border-radius: 10px;
             Text {
@@ -35,7 +35,7 @@ export component TabSelectorView inherits Rectangle {
     VerticalLayout {
         padding: 5px;
         Rectangle {
-            background: #111;
+            background: #222;
             border-radius: 10px;
             VerticalLayout {
                 padding: 5px;

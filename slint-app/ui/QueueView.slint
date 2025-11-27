@@ -1,48 +1,7 @@
 import { NowPlayingView } from "NowPlayingView.slint";
+import { Song } from "Types.slint";
+import { ScrollView } from "CustomComp.slint";
 
-export struct Song {
-    title: string,
-    artists: string,
-    album_art: image,
-    id: string,
-}
-
-component ScrollView inherits Rectangle {
-    in property <length> content-height;
-    in-out property <length> viewport-y <=> touch.viewport-y;
-
-    changed height => {
-        viewport-y = max((self.height - content-height),
-                             min(0px, viewport-y));
-    }
-    changed content-height => {
-        viewport-y = max((self.height - content-height),
-                                     min(0px, viewport-y));
-    }
-
-    touch := TouchArea {
-        width: parent.width;
-        height: parent.height;
-
-        property <length> viewport-y;
-        private property <length> spac: content-height > parent.height ? 0 : parent.height - content-height;
-        scroll-event(event) => {
-            viewport-y = max(-(content-height - parent.height),
-                           min(0px, viewport-y - event.delta-y));
-            return accept;
-        }
-
-        rect := Rectangle {
-            y: touch.viewport-y - spac;
-            width: parent.width;
-            VerticalLayout {
-                VerticalLayout {
-                    @children
-                }
-            }
-        }
-    }
-}
 
 export component QueueView inherits Rectangle {
     in property <[Song]> queue;
