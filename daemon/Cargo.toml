@@ -30,3 +30,4 @@ signal-hook = "0.3.18"
 base64 = "0.22.1"
 
 aurora-protocol = {path = "../protocol"}
+mpris-server = "0.9.0"

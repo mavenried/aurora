@@ -10,6 +10,7 @@ use tokio::{net::TcpListener, sync::Mutex};
 
 mod handlers;
 mod helpers;
+mod mpris_thread;
 mod types;
 mod watcher_thread;
 use types::*;
@@ -83,6 +84,8 @@ async fn async_main(port: u16) -> std::io::Result<()> {
 
     let state_clone = state.clone();
     tokio::spawn(async move { watcher_thread::init(state_clone).await });
+    let state_clone = state.clone();
+    tokio::spawn(async move { mpris_thread::init(state_clone).await });
 
     let Ok(listener) = TcpListener::bind(format!("0.0.0.0:{port}")).await else {
         tracing::error!("Could not bind to port {port}.");

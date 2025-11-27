@@ -15,6 +15,7 @@ impl StateStruct {
 
         self.current_idx = prev_idx;
         self.current_song.replace(self.queue[prev_idx].clone());
+        tracing::info!("Prev");
         GetReturn::Ok
     }
 
@@ -30,6 +31,7 @@ impl StateStruct {
 
         self.current_idx = next_idx;
         self.current_song.replace(self.queue[next_idx].clone());
+        tracing::info!("Next");
         GetReturn::Ok
     }
 }

@@ -1,13 +1,23 @@
 import { Slider, VerticalBox, HorizontalBox } from "std-widgets.slint";
 import { CustomSlider } from "CustomComp.slint";
 
+export global TimeUtils {
+    pure public function ms_to_minsec(ms: int) -> string {
+        let total_sec: int = ms / 1000;
+        let min_str: int = total_sec / 60;
+        let sec: int = Math.mod(total_sec, 60);
+        let sec_str: string = sec < 10 ? "0" + sec : sec;
+        return min_str + ":" + sec_str;
+    }
+}
+
 export component PlayerView inherits Rectangle {
     height: 100px;
     background: #333;
     border-radius: 10px;
 
-    in-out property <int> value;
-    in property <int> duration;
+    in-out property <int> value: 120000;
+    in property <int> duration: 160000;
     in property <bool> is-paused;
 
     callback prev();
@@ -19,44 +29,69 @@ export component PlayerView inherits Rectangle {
         padding: 5px;
         spacing: 0px;
         HorizontalLayout {
-            alignment: LayoutAlignment.center;
             padding: 10px;
-            Image {
-                source: @image-url("../assets/prev.png");
-                width: 50px;
-                height: 50px;
-                TouchArea {
-                    height: parent.height;
-                    width: parent.width;
-                    clicked => {
-                        prev()
+            VerticalLayout {
+                padding: 10px;
+                alignment: LayoutAlignment.center;
+                Text {
+                    text: TimeUtils.ms_to_minsec(value);
+                    font-size: 20px;
+                    color: #eee;
+                }
+            }
+
+            HorizontalLayout {
+                alignment: LayoutAlignment.center;
+                spacing: 5px;
+
+                Image {
+                    source: @image-url("../assets/prev.png");
+                    width: 50px;
+                    height: 50px;
+                    TouchArea {
+                        height: parent.height;
+                        width: parent.width;
+                        clicked => {
+                            prev()
+                        }
+                    }
+                }
+
+                Image {
+                    source: is-paused ? @image-url("../assets/play.png") : @image-url("../assets/pause.png");
+                    width: 50px;
+                    height: 50px;
+                    TouchArea {
+                        height: parent.height;
+                        width: parent.width;
+                        clicked => {
+                            pause()
+                        }
+                    }
+                }
+
+                Image {
+                    source: @image-url("../assets/next.png");
+                    width: 50px;
+                    height: 50px;
+                    TouchArea {
+                        height: parent.height;
+                        width: parent.width;
+                        clicked => {
+                            next()
+                        }
                     }
                 }
             }
 
-            Image {
-                source: is-paused ? @image-url("../assets/play.png") : @image-url("../assets/pause.png");
-                width: 50px;
-                height: 50px;
-                TouchArea {
-                    height: parent.height;
-                    width: parent.width;
-                    clicked => {
-                        pause()
-                    }
-                }
-            }
-
-            Image {
-                source: @image-url("../assets/next.png");
-                width: 50px;
-                height: 50px;
-                TouchArea {
-                    height: parent.height;
-                    width: parent.width;
-                    clicked => {
-                        next()
-                    }
+            VerticalLayout {
+                alignment: LayoutAlignment.center;
+                padding: 10px;
+                Text {
+                    text: TimeUtils.ms_to_minsec(duration);
+                    font-size: 20px;
+                    horizontal-alignment: TextHorizontalAlignment.right;
+                    color: #eee;
                 }
             }
         }

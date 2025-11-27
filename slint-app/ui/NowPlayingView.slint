@@ -2,7 +2,6 @@ export component NowPlayingView inherits Rectangle {
     in property <string> Title;
     in property <string> Artists;
     in property <image> AlbumArt;
-    
     background: #333;
     border-radius: 10px;
 
@@ -26,7 +25,7 @@ export component NowPlayingView inherits Rectangle {
             padding: 10px;
 
             HorizontalLayout {
-                alignment: LayoutAlignment.space-around;
+                alignment: LayoutAlignment.start;
                 Rectangle {
                     property <bool> should-scroll: song.preferred-width > 270px;
                     property <float> scroll-offset: 0;
@@ -66,7 +65,7 @@ export component NowPlayingView inherits Rectangle {
             }
 
             HorizontalLayout {
-                alignment: LayoutAlignment.space-around;
+                alignment: LayoutAlignment.start;
                 Rectangle {
                     property <bool> should-scroll: artist.preferred-width > 270px;
                     property <float> scroll-offset: 0;

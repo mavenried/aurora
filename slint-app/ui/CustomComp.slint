@@ -5,7 +5,7 @@ export component CustomSlider inherits Rectangle {
     in property <int> minimum: 0;
     in-out property <int> value: 50;
     in property <int> maximum: 100;
-    in property <int> step: 1000;
+    in property <int> step: 10000;
     callback released(float);
 
     private property <float> normalized-value: (value - minimum) / (maximum - minimum);
