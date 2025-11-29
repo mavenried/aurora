@@ -200,6 +200,13 @@ pub async fn interface(app: slint::Weak<AuroraPlayer>) -> anyhow::Result<()> {
             });
         });
         let state = state_clone.clone();
+        aurora.on_queue_clear(move || {
+            let state = state.clone();
+            tokio::spawn(async move {
+                let _ = state.lock().await.writer_tx.send(Request::Clear).await;
+            });
+        });
+        let state = state_clone.clone();
         aurora.on_queue_remove(move |n| {
             let state = state.clone();
             tokio::spawn(async move {

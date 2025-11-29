@@ -7,16 +7,55 @@ export component QueueView inherits Rectangle {
     in property <[Song]> queue;
     callback queue-click(int);
     callback queue-remove(int);
+    callback queue-clear();
 
     width: 400px;
     background: #333;
     border-radius: 10px;
     clip: true;
 
-    HorizontalLayout {
+    VerticalLayout {
+        HorizontalLayout {
+            padding: 5px;
+            alignment: LayoutAlignment.space-between;
+
+            Rectangle {
+                width: 60px;
+                height: 30px;
+                background: #333;
+                border-radius: 10px;
+
+                Text {
+                    text: "Queue";
+                    color: #eee;
+                    font-size: 15px;
+                }
+            }
+
+            Rectangle {
+                width: 60px;
+                height: 30px;
+                background: button.has-hover ? #444 : #333;
+                animate background { duration: 100ms; }
+                border-radius: 10px;
+                button := TouchArea {
+                    clicked => {
+                        root.queue-clear();
+                    }
+                }
+
+                Text {
+                    text: "Clear";
+                    color: #eee;
+                    font-size: 15px;
+                }
+            }
+        }
+
         scroll := ScrollView {
             content-height: 105px * queue.length - 5px;
             transform-rotation: 180deg;
+            background: #222;
 
             VerticalLayout {
                 spacing: 5px;
@@ -26,7 +65,7 @@ export component QueueView inherits Rectangle {
                     AlbumArt: item.album_art;
                     Title: item.title;
                     border-radius: 0px;
-                    background: touch.has-hover ? #444 : #333;
+                    background: touch.has-hover ? #444 : #222;
                     animate background { duration: 200ms; }
                     touch := TouchArea {
                         width: parent.width;

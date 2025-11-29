@@ -9,6 +9,7 @@ import "../assets/NotoSansJP-Regular.ttf";
 export component AuroraPlayer inherits Window {
     callback queue-click(int);
     callback queue-remove(int);
+    callback queue-clear();
     callback prev();
     callback pause();
     callback next();
@@ -57,6 +58,9 @@ export component AuroraPlayer inherits Window {
                     queue-remove(n) => {
                         root.queue-remove(n)
                     }
+                    queue-clear => {
+                        root.queue-clear()
+                    };
                 }
 
                 VerticalLayout {

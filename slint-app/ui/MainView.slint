@@ -1,6 +1,6 @@
 import { VerticalBox, HorizontalBox } from "std-widgets.slint";
-import { ComboBox, List } from "CustomComp.slint";
-import { Song }from "Types.slint";
+import { ComboBox, SongList, PlList } from "CustomComp.slint";
+import { Song, Playlist }from "Types.slint";
 
 export component SearchView inherits VerticalBox {
     in-out property <string> searchMode: "By Title";
@@ -12,7 +12,7 @@ export component SearchView inherits VerticalBox {
     VerticalLayout {
         transform-rotation: 180deg;
         spacing: 5px;
-        List {
+        SongList {
             transform-rotation: 180deg;
             items: searchResults;
             item-clicked(id) => {
@@ -26,9 +26,17 @@ export component SearchView inherits VerticalBox {
             Rectangle {
                 border-radius: 10px;
                 height: 50px;
-                background: #222;
+                background: #111;
+                border-color: #00000033;
+                border-width: 1px;
                 HorizontalBox {
                     padding: 10px;
+                    Image {
+                        source: @image-url("../assets/search.png");
+                        height: parent.height - 20px;
+                        width: parent.height - 20px;
+                    }
+
                     TextInput {
                         font-size: 20px;
                         vertical-alignment: center;
@@ -49,14 +57,31 @@ export component SearchView inherits VerticalBox {
     }
 }
 
+export component PlaylistView inherits VerticalBox {
+    in property <[Playlist]> Playlists;
+    padding: 10px;
+    Text {
+        text: "Playlists";
+        color: #eee;
+        font-size: 30px;
+    }
+
+    PlList {
+        items: Playlists;
+    }
+}
+
 export component MainView inherits Rectangle {
-    background: #333;
+    background: #222;
     border-radius: 10px;
     in property <string> active-view;
     in property <[Song]> searchResults;
+    in property <[Playlist]> Playlists;
     in property <bool> searchOverflow;
     callback query-submit(string, string);
     callback add(string);
+    callback get-all-playlists();
+    callback get-playlist(string);
 
     SearchView {
         visible: active-view == "Search";
@@ -68,5 +93,10 @@ export component MainView inherits Rectangle {
         item-clicked(id) => {
             add(id);
         }
+    }
+
+    PlaylistView {
+        visible: active-view == "Playlists";
+        Playlists: root.Playlists;
     }
 }

@@ -1,10 +1,11 @@
 import { HorizontalBox, VerticalBox } from "std-widgets.slint";
-import { Song } from "Types.slint";
+import { Song, Playlist } from "Types.slint";
 
 export component ScrollView inherits Rectangle {
     in property <length> content-height;
     in-out property <length> viewport-y <=> touch.viewport-y;
     in property <int> direction: 1;
+    clip: true;
 
     changed height => {
         viewport-y = max((self.height - content-height),
@@ -138,6 +139,11 @@ export component ComboBox {
             height: parent.height;
             clicked => {
                 root.expanded = !root.expanded;
+                if root.expanded {
+                    box.height = model.length * 50px + 15px;
+                } else {
+                    box.height = 0;
+                }
             }
         }
 
@@ -159,13 +165,18 @@ export component ComboBox {
         }
     }
 
-    if expanded: Rectangle {
+    box := Rectangle {
         background: #222;
         border-width: 1px;
         border-color: #689d6a;
         y: parent.height + 5px;
-        height: model.length * 50px + 15px;
+        height: 0px;
         border-radius: 10px;
+        clip: true;
+        animate height {
+            duration: 100ms;
+            easing: ease-in-out-quad;
+        }
         VerticalLayout {
             spacing: 5px;
             padding: 5px;
@@ -182,6 +193,7 @@ export component ComboBox {
                     clicked => {
                         root.current = item;
                         root.expanded = false;
+                        box.height = 0;
                     }
                 }
 
@@ -199,7 +211,62 @@ export component ComboBox {
     }
 }
 
-export component List inherits VerticalLayout {
+export component PlList inherits VerticalLayout {
+    in property <[Playlist]> items;
+    callback item-clicked(string);
+    Rectangle {
+        border-radius: 10px;
+        clip: true;
+        ScrollView {
+            content-height: 65px * items.length - 5px;
+            direction: -1;
+            box := VerticalBox {
+                spacing: 5px;
+                padding: 0px;
+                for item[i] in items: Rectangle {
+                    border-radius: 10px;
+                    background: touch.has-hover ? #444 : #333;
+                    animate background { duration: 100ms; }
+                    touch := TouchArea {
+                        clicked => {
+                            item-clicked(item.id);
+                        }
+                    }
+
+                    HorizontalLayout {
+                        padding: 5px;
+                        padding-right: 20px;
+                        spacing: 10px;
+                        Rectangle {
+                            height: 50px;
+                            width: 50px;
+                            border-radius: 10px;
+                            clip: true;
+                        }
+
+                        Text {
+                            text: item.title;
+                            color: #eee;
+                            font-size: 20px;
+                            vertical-alignment: center;
+                            horizontal-alignment: left;
+                        }
+
+                        Text {
+                            text: item.length;
+                            color: #aaa;
+                            font-size: 15px;
+                            vertical-alignment: center;
+                            horizontal-alignment: right;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+export component SongList inherits VerticalLayout {
     in property <[Song]> items;
     callback item-clicked(string);
     Rectangle {
