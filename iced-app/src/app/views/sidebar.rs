@@ -33,13 +33,13 @@ impl AuroraPlayer {
                         text(Self::truncate(&song.artists.join(", "), 40)).size(16)
                     ]
                     .spacing(PADDING)
-                    .align_x(Alignment::Center)
+                    .align_x(Alignment::Start)
                     .width(Fill)
                 )
                 .align_y(Alignment::Center)
                 .height(Fill)
             ])
-            .align_x(Alignment::Center)
+            .align_x(Alignment::Start)
             .width(Fill)
             .height(Fixed(100.));
 
