@@ -3,10 +3,11 @@ use signal_hook::{consts::TERM_SIGNALS, iterator::Signals};
 use std::{
     env::args,
     fs::{File, remove_file},
+    path::PathBuf,
     sync::Arc,
     vec,
 };
-use tokio::{net::TcpListener, sync::Mutex};
+use tokio::{net::UnixListener, sync::Mutex};
 
 mod handlers;
 mod helpers;
@@ -16,21 +17,13 @@ mod watcher_thread;
 use types::*;
 
 const PIDFILE: &str = "/tmp/aurora-daemon.pid";
+const SOCKFILE: &str = "/tmp/aurora-daemon.sock";
 const OUTFILE: &str = "/tmp/aurora-daemon.out";
 
 fn main() -> std::io::Result<()> {
     tracing_subscriber::fmt::init();
 
-    let Ok(port) = args()
-        .nth(1)
-        .unwrap_or_else(|| "4321".to_string())
-        .parse::<u16>()
-    else {
-        tracing::error!("could not parse port.");
-        std::process::exit(1)
-    };
-
-    if args().nth(2).is_none() {
+    if args().nth(1).is_none() {
         let daemonize = Daemonize::new()
             .pid_file(PIDFILE)
             .stdout(File::create(OUTFILE).unwrap());
@@ -47,12 +40,10 @@ fn main() -> std::io::Result<()> {
         .build()
         .unwrap();
 
-    rt.block_on(async_main(port))
+    rt.block_on(async_main())
 }
 
-async fn async_main(port: u16) -> std::io::Result<()> {
-    tracing::info!("Binding to port {port}.");
-
+async fn async_main() -> std::io::Result<()> {
     std::thread::spawn(move || {
         let mut signals = Signals::new(TERM_SIGNALS).unwrap();
 
@@ -60,6 +51,7 @@ async fn async_main(port: u16) -> std::io::Result<()> {
         for sig in signals.forever() {
             tracing::info!("Received signal {:?}, cleaning up PID file.", sig);
             remove_file(PIDFILE).ok();
+            remove_file(SOCKFILE).ok();
             std::process::exit(0);
         }
     });
@@ -87,10 +79,12 @@ async fn async_main(port: u16) -> std::io::Result<()> {
     let state_clone = state.clone();
     tokio::spawn(async move { mpris_thread::init(state_clone).await });
 
-    let Ok(listener) = TcpListener::bind(format!("0.0.0.0:{port}")).await else {
-        tracing::error!("Could not bind to port {port}.");
+    let path = PathBuf::from(SOCKFILE);
+    let listener = UnixListener::bind(path).unwrap_or_else(|err| {
+        tracing::error!("Error: {err}");
         std::process::exit(1)
-    };
+    });
+    tracing::info!("{listener:?}");
     loop {
         let (socket, addr) = listener.accept().await?;
         let (reader, w) = socket.into_split();

@@ -1,7 +1,7 @@
 use anyhow::Ok;
 use aurora_protocol::{Request, Response, Song};
 use std::time::Duration;
-use tokio::{io::AsyncReadExt, net::tcp::OwnedReadHalf};
+use tokio::{io::AsyncReadExt, net::unix::OwnedReadHalf};
 
 use crate::{
     handlers::status::status,

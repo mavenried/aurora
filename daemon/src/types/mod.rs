@@ -1,6 +1,6 @@
 use aurora_protocol::SongMeta;
 use std::{collections::HashMap, sync::Arc};
-use tokio::{net::tcp::OwnedWriteHalf, sync::Mutex};
+use tokio::{net::unix::OwnedWriteHalf, sync::Mutex};
 use uuid::Uuid;
 
 mod state_impl;

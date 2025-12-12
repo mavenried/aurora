@@ -1,13 +1,14 @@
-use std::{process::Command, sync::Arc, time::Duration};
+use std::{path::PathBuf, process::Command, sync::Arc, time::Duration};
 
 use aurora_protocol::{Request, Response, SearchType};
 use base64::{Engine, prelude::BASE64_URL_SAFE};
 use slint::{Image, Rgba8Pixel, SharedPixelBuffer};
+
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::{
-        TcpStream,
-        tcp::{OwnedReadHalf, OwnedWriteHalf},
+        UnixStream,
+        unix::{OwnedReadHalf, OwnedWriteHalf},
     },
     sync::{Mutex, mpsc::Receiver},
 };
@@ -27,7 +28,7 @@ pub fn album_art_from_data(data: &[u8]) -> anyhow::Result<SharedPixelBuffer<Rgba
     ))
 }
 
-async fn tcp_sender(mut writer: OwnedWriteHalf, mut rx: Receiver<Request>) -> anyhow::Result<()> {
+async fn unix_sender(mut writer: OwnedWriteHalf, mut rx: Receiver<Request>) -> anyhow::Result<()> {
     loop {
         match rx.recv().await {
             Some(req) => {
@@ -45,7 +46,7 @@ async fn tcp_sender(mut writer: OwnedWriteHalf, mut rx: Receiver<Request>) -> an
     }
 }
 
-async fn tcp_recver(
+async fn unix_recver(
     mut reader: OwnedReadHalf,
     state: State,
     app: slint::Weak<AuroraPlayer>,
@@ -146,10 +147,11 @@ async fn tcp_recver(
 }
 
 pub async fn interface(app: slint::Weak<AuroraPlayer>) -> anyhow::Result<()> {
-    let mut stream: Option<TcpStream> = None;
-    
+    let mut stream: Option<UnixStream> = None;
+
     while stream.is_none() {
-        if let Ok(s) = TcpStream::connect("0.0.0.0:4321").await{
+        let path = PathBuf::from("/tmp/aurora-daemon.sock");
+        if let Ok(s) = UnixStream::connect(path).await {
             tracing::info!("Connected at 0.0.0.0:4321");
             stream = Some(s);
         } else {
@@ -266,13 +268,13 @@ pub async fn interface(app: slint::Weak<AuroraPlayer>) -> anyhow::Result<()> {
     });
 
     tokio::spawn(async move {
-        if let Err(err) = tcp_sender(writer, rx).await {
+        if let Err(err) = unix_sender(writer, rx).await {
             tracing::error!("Sender Error: {err}");
         }
     });
 
     tokio::spawn(async move {
-        if let Err(err) = tokio::spawn(tcp_recver(reader, state.clone(), app)).await {
+        if let Err(err) = tokio::spawn(unix_recver(reader, state.clone(), app)).await {
             tracing::error!("Receiver Error: {err}");
         }
     });

@@ -13,6 +13,8 @@ pub type State = Arc<Mutex<StateStruct>>;
 pub enum ImageFor {
     Queue(Uuid),
     Search(Uuid),
+
+    #[allow(unused)]
     Playlist(Uuid),
 }
 
