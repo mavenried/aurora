@@ -6,4 +6,4 @@ aurora
 A music player.
 </p>
 
-Indev.
+Indev by [@mavenried](https://github.com/mavenried).
