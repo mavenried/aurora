@@ -1,5 +1,6 @@
 import { Slider, VerticalBox, HorizontalBox } from "std-widgets.slint";
 import { CustomSlider } from "CustomComp.slint";
+import { Theme } from "Types.slint";
 
 export global TimeUtils {
     pure public function ms_to_minsec(ms: int) -> string {
@@ -13,8 +14,8 @@ export global TimeUtils {
 
 export component PlayerView inherits Rectangle {
     height: 100px;
-    background: #222;
-    border-radius: 10px;
+    background: Theme.bg2;
+    border-radius: 15px;
 
     in-out property <int> value;
     in property <int> duration;
@@ -36,7 +37,7 @@ export component PlayerView inherits Rectangle {
                 Text {
                     text: TimeUtils.ms_to_minsec(value);
                     font-size: 20px;
-                    color: #eee;
+                    color: Theme.text;
                 }
             }
 
@@ -91,7 +92,7 @@ export component PlayerView inherits Rectangle {
                     text: TimeUtils.ms_to_minsec(duration);
                     font-size: 20px;
                     horizontal-alignment: TextHorizontalAlignment.right;
-                    color: #eee;
+                    color: Theme.text;
                 }
             }
         }

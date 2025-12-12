@@ -1,9 +1,10 @@
+import { Theme } from "Types.slint";
 export component NowPlayingView inherits Rectangle {
     in property <string> Title;
     in property <string> Artists;
     in property <image> AlbumArt;
-    background: #222;
-    border-radius: 10px;
+    background: Theme.bg2;
+    border-radius: 15px;
 
     HorizontalLayout {
         padding: 10px;
@@ -18,7 +19,7 @@ export component NowPlayingView inherits Rectangle {
             height: 80px;
             width: 80px;
             clip: true;
-            border-radius: 10px;
+            border-radius: 15px;
         }
 
         VerticalLayout {
@@ -39,7 +40,7 @@ export component NowPlayingView inherits Rectangle {
                         text: Title;
                         y: 0;
                         x: should-scroll ? scroll-offset * 1px : 0;
-                        color: #eee;
+                        color: Theme.text;
                     }
 
                     Text {
@@ -48,7 +49,7 @@ export component NowPlayingView inherits Rectangle {
                         y: 0;
                         x: should-scroll ? scroll-offset * 1px + song.preferred-width + 50px : 1000px;
                         visible: should-scroll;
-                        color: #eeeeee;
+                        color: Theme.text;
                     }
 
                     timer := Timer {
@@ -79,7 +80,7 @@ export component NowPlayingView inherits Rectangle {
                         text: Artists;
                         y: 0;
                         x: should-scroll ? scroll-offset * 1px : 0;
-                        color: #aaa;
+                        color: Theme.text2;
                     }
 
                     Text {
@@ -88,7 +89,7 @@ export component NowPlayingView inherits Rectangle {
                         y: 0;
                         x: should-scroll ? scroll-offset * 1px + artist.preferred-width + 30px : 1000px;
                         visible: should-scroll;
-                        color: #aaa;
+                        color: Theme.text2;
                     }
 
                     timer2 := Timer {

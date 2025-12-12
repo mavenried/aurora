@@ -1,6 +1,6 @@
 import { VerticalBox, HorizontalBox } from "std-widgets.slint";
 import { ComboBox, SongList, PlList } from "CustomComp.slint";
-import { Song, Playlist }from "Types.slint";
+import { Song, Playlist, Theme }from "Types.slint";
 
 export component SearchView inherits VerticalBox {
     in-out property <string> searchMode: "By Title";
@@ -26,8 +26,7 @@ export component SearchView inherits VerticalBox {
             Rectangle {
                 border-radius: 10px;
                 height: 50px;
-                background: #111;
-                border-color: #00000033;
+                background: Theme.bg1;
                 border-width: 1px;
                 HorizontalBox {
                     padding: 10px;
@@ -40,7 +39,7 @@ export component SearchView inherits VerticalBox {
                     TextInput {
                         font-size: 20px;
                         vertical-alignment: center;
-                        color: #eee;
+                        color: Theme.text;
                         text <=> query;
                         accepted => {
                             submit(query, searchMode);
@@ -62,7 +61,7 @@ export component PlaylistView inherits VerticalBox {
     padding: 10px;
     Text {
         text: "Playlists";
-        color: #eee;
+        color: Theme.text;
         font-size: 30px;
     }
 
@@ -72,8 +71,8 @@ export component PlaylistView inherits VerticalBox {
 }
 
 export component MainView inherits Rectangle {
-    background: #222;
-    border-radius: 10px;
+    background: Theme.bg2;
+    border-radius: 15px;
     in property <string> active-view;
     in property <[Song]> searchResults;
     in property <[Playlist]> Playlists;

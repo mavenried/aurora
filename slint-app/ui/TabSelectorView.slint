@@ -1,13 +1,17 @@
+import { Theme } from "Types.slint";
 export component TabButton inherits Rectangle {
     in-out property <string> active;
     in property <string> label;
     Rectangle {
-        background: active == label ? #689d6a : #222;
+        background: active == label ? Theme.bg1 : Theme.bg2;
+
         animate background { duration: 100ms; }
-        border-radius: 5px;
+        animate border-color { duration: 100ms; }
+        border-radius: 10px;
         Text {
             text: label;
-            color: #eee;
+            color: active == label ? Theme.accent : Theme.text;
+            animate color { duration: 100ms; }
             font-size: 20px;
             vertical-alignment: center;
             horizontal-alignment: center;
@@ -29,8 +33,9 @@ export component TabSelectorView inherits Rectangle {
     height: 100px;
 
     Rectangle {
-        background: #222;
-        border-radius: 10px;
+        background: Theme.bg2;
+        border-radius: 15px;
+
         VerticalLayout {
             padding: 5px;
             spacing: 5px;

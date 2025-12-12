@@ -1,4 +1,4 @@
-use std::{sync::Arc, time::Duration};
+use std::{process::Command, sync::Arc, time::Duration};
 
 use aurora_protocol::{Request, Response, SearchType};
 use base64::{Engine, prelude::BASE64_URL_SAFE};
@@ -146,10 +146,19 @@ async fn tcp_recver(
 }
 
 pub async fn interface(app: slint::Weak<AuroraPlayer>) -> anyhow::Result<()> {
-    let stream = TcpStream::connect("0.0.0.0:4321").await?;
-    tracing::info!("Connected at 0.0.0.0:4321");
+    let mut stream: Option<TcpStream> = None;
+    
+    while stream.is_none() {
+        if let Ok(s) = TcpStream::connect("0.0.0.0:4321").await{
+            tracing::info!("Connected at 0.0.0.0:4321");
+            stream = Some(s);
+        } else {
+            Command::new("aurora-daemon").spawn()?;
+            std::thread::sleep(Duration::from_secs(1));
+        }
+    }
 
-    let (reader, writer) = stream.into_split();
+    let (reader, writer) = stream.unwrap().into_split();
     let (tx, rx) = tokio::sync::mpsc::channel::<Request>(10);
     let state = Arc::new(Mutex::new(StateStruct {
         default_art_buffer: album_art_from_data(DEFAULT_ART).unwrap(),
