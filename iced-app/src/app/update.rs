@@ -25,19 +25,19 @@ impl AuroraPlayer {
                 self.slider_pressed = false;
                 self.status.position = dur;
                 return Task::perform(
-                    Self::send(self.tcp_connection.clone(), Request::Seek(dur)),
+                    Self::send(self.unix_connection.clone(), Request::Seek(dur)),
                     |_o| Message::NoOP,
                 );
             }
 
             Message::TcpEvent(ev) => match ev {
-                TcpEvent::Connected(conn) => self.tcp_connection = Some(conn),
-                TcpEvent::PacketReceived(data) => {
+                UnixSocketEvent::Connected(conn) => self.unix_connection = Some(conn),
+                UnixSocketEvent::PacketReceived(data) => {
                     return Task::perform(Self::handle_packet(data), Message::Response);
                 }
-                TcpEvent::PacketSent => (),
-                TcpEvent::Error(err) => tracing::error!("{err}"),
-                TcpEvent::Disconnected => (),
+                UnixSocketEvent::PacketSent => (),
+                UnixSocketEvent::Error(err) => tracing::error!("{err}"),
+                UnixSocketEvent::Disconnected => (),
             },
 
             Message::NoOP => (),

@@ -5,8 +5,8 @@ use iced::widget::image::Handle;
 use lru::LruCache;
 use uuid::Uuid;
 
-mod tcp;
-pub use tcp::*;
+mod unix;
+pub use unix::*;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum MainView {
@@ -19,7 +19,7 @@ pub enum MainView {
 pub enum Message {
     MainViewSelect(MainView),
     PlaylistSelected(Uuid),
-    TcpEvent(TcpEvent),
+    TcpEvent(UnixSocketEvent),
     Response(Response),
     SliderChanged(f32),
     SeekCommit,

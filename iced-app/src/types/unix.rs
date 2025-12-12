@@ -2,11 +2,11 @@ use std::sync::Arc;
 use tokio::io::AsyncWriteExt;
 
 use aurora_protocol::Request;
-use tokio::{net::tcp::OwnedWriteHalf, sync::Mutex};
+use tokio::{net::unix::OwnedWriteHalf, sync::Mutex};
 
 #[derive(Debug, Clone)]
-pub enum TcpEvent {
-    Connected(TcpWriter),
+pub enum UnixSocketEvent {
+    Connected(SocketWriter),
     PacketReceived(Vec<u8>),
     PacketSent,
     Error(String),
@@ -14,14 +14,14 @@ pub enum TcpEvent {
 }
 
 #[derive(Debug, Clone)]
-pub enum TcpCommand {
+pub enum UnixSocketCommand {
     Send(Vec<u8>),
     Disconnect,
 }
 
 #[derive(Debug, Clone)]
-pub struct TcpWriter(Arc<Mutex<OwnedWriteHalf>>);
-impl TcpWriter {
+pub struct SocketWriter(Arc<Mutex<OwnedWriteHalf>>);
+impl SocketWriter {
     pub fn new(writer: OwnedWriteHalf) -> Self {
         Self(Arc::new(Mutex::new(writer)))
     }

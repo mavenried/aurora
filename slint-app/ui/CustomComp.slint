@@ -44,70 +44,115 @@ export component CustomSlider inherits Rectangle {
 
     in property <bool> enabled: true;
     in property <int> minimum: 0;
-    in-out property <int> value: 50;
     in property <int> maximum: 100;
+
+    in-out property <int> value: 0;
+    in-out property <int> displayValue: 0;
+    in-out property <int> displayHoverValue: 0;
+
     in property <int> step: 10000;
     callback released(float);
 
-    private property <float> normalized-value: (value - minimum) / (maximum - minimum);
+    private property <float> normalizedDisplayValue: (displayValue - minimum) / (maximum - minimum);
+    private property <float> normalizedDisplayHoverValue: (displayHoverValue - minimum) / (maximum - minimum);
+    private property <float> normalizedValue: (value - minimum) / (maximum - minimum);
+    private property <bool> pressed: false;
+
+    animate normalizedDisplayValue { duration: 100ms; }
+
+    private property <bool> skippedValueUpdate--flag: false;
+
+    changed value => {
+        if !root.pressed {
+            if root.skippedValueUpdate--flag {
+                root.displayValue = root.value;
+            } else {
+                root.skippedValueUpdate--flag = true;
+            }
+        }
+    }
 
     height: 40px;
-
     track := Rectangle {
         y: (parent.height - self.height) / 2;
-        height: 6px;
+        height: touch.has-hover ? 12px : 6px;
         background: Theme.bg3;
-        border-radius: 3px;
+        border-radius: touch.has-hover ? 6px : 3px;
+
+        animate height, border-radius { duration: 100ms; }
+
+        fillHover := HorizontalBox {
+            alignment: LayoutAlignment.start;
+            padding: 0px;
+            width: track.width;
+            visible: touch.has-hover;
+            opacity: 30%;
+
+            Rectangle {
+                width: track.width * root.normalizedDisplayHoverValue;
+                background: Theme.text2;
+                border-radius: track.border-radius;
+            }
+        }
+
         fill := HorizontalBox {
             alignment: LayoutAlignment.start;
             padding: 0px;
             width: track.width;
+
             Rectangle {
-                width: track.width * root.normalized-value;
+                width: track.width * root.normalizedDisplayValue;
                 background: Theme.accent;
                 border-radius: track.border-radius;
-                animate background { duration: 150ms; }
             }
         }
     }
 
     touch := TouchArea {
         enabled: root.enabled;
+        height: self.has-hover ? 12px : 6px;
 
         pointer-event(event) => {
             if (event.kind == PointerEventKind.down || event.kind == PointerEventKind.move) {
                 if (self.pressed) {
-                    root.value = root.minimum + (root.maximum - root.minimum) * clamp(self.mouse-x / root.width, 0, 1);
+                    root.pressed = true;
+                    root.displayValue = root.minimum + (root.maximum - root.minimum) * clamp(self.mouse-x / root.width, 0, 1);
+                    root.displayHoverValue = root.minimum + (root.maximum - root.minimum) * clamp(self.mouse-x / root.width, 0, 1);
+                } else if (self.has-hover) {
+                    root.displayHoverValue = root.minimum + (root.maximum - root.minimum) * clamp(self.mouse-x / root.width, 0, 1);
                 }
             }
             if (event.kind == PointerEventKind.up) {
-                root.released(root.value);
+                root.pressed = false;
+                root.skippedValueUpdate--flag = false;
+                root.released(root.displayValue);
             }
         }
     }
 
+    /*
     focus-scope := FocusScope {
         enabled: root.enabled;
 
         key-pressed(event) => {
             if (event.text == Key.LeftArrow) {
-                root.value = max(root.minimum, root.value - root.step);
-                root.released(root.value);
+                root.displayValue = max(root.minimum, root.displayValue - root.step);
+                root.released(root.displayValue);
                 return accept;
             }
             if (event.text == Key.RightArrow) {
-                root.value = min(root.maximum, root.value + root.step);
-                root.released(root.value);
+                root.displayValue = min(root.maximum, root.displayValue + root.step);
+                root.released(root.displayValue);
                 return accept;
             }
             if (event.text == Key.Home) {
-                root.value = root.minimum;
-                root.released(root.value);
+                root.displayValue = root.minimum;
+                root.released(root.displayValue);
                 return accept;
             }
             if (event.text == Key.End) {
-                root.value = root.maximum;
-                root.released(root.value);
+                root.displayValue = root.maximum;
+                root.released(root.displayValue);
                 return accept;
             }
             return reject;
@@ -120,6 +165,7 @@ export component CustomSlider inherits Rectangle {
             return reject;
         }
     }
+    */
 }
 
 export component ComboBox {

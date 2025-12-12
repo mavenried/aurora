@@ -57,7 +57,7 @@ export component SearchView inherits VerticalBox {
 }
 
 export component PlaylistView inherits VerticalBox {
-    in property <[Playlist]> Playlists;
+    in property <[Playlist]> playlists;
     padding: 10px;
     Text {
         text: "Playlists";
@@ -66,7 +66,7 @@ export component PlaylistView inherits VerticalBox {
     }
 
     PlList {
-        items: Playlists;
+        items: playlists;
     }
 }
 
@@ -75,7 +75,7 @@ export component MainView inherits Rectangle {
     border-radius: 15px;
     in property <string> active-view;
     in property <[Song]> searchResults;
-    in property <[Playlist]> Playlists;
+    in property <[Playlist]> playlists;
     in property <bool> searchOverflow;
     callback query-submit(string, string);
     callback add(string);
@@ -96,6 +96,6 @@ export component MainView inherits Rectangle {
 
     PlaylistView {
         visible: active-view == "Playlists";
-        Playlists: root.Playlists;
+        playlists: root.playlists;
     }
 }

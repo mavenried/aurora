@@ -18,7 +18,7 @@ pub struct AuroraPlayer {
     artcache: ArtCache,
     default_album_art: image::Handle,
     status: Status,
-    tcp_connection: Option<TcpWriter>,
+    unix_connection: Option<SocketWriter>,
     progress_slider_state: f32,
     slider_pressed: bool,
     pending_art_requests: Vec<Uuid>,
@@ -34,7 +34,7 @@ impl AuroraPlayer {
                     is_paused: true,
                     current_idx: 0,
                 },
-                tcp_connection: None,
+                unix_connection: None,
                 current_mainview: MainView::Search,
                 default_album_art: image::Handle::from_bytes(
                     include_bytes!("../../assets/placeholder.jpg").as_slice(),

@@ -15,9 +15,9 @@ use crate::{
 impl AuroraPlayer {
     pub fn dark_box(theme: &Theme) -> container::Style {
         container::Style {
-            background: Some(Background::Color(Color::from_rgb(0.1, 0.1, 0.1))),
+            background: Some(Background::Color(theme.palette().background)),
             border: Border {
-                radius: 10.into(),
+                radius: 15.into(),
                 ..Default::default()
             },
             ..container::rounded_box(theme)
@@ -33,20 +33,7 @@ impl AuroraPlayer {
         )
         .width(Fill)
         .height(Fill)
-        .style(move |_theme, status| button::Style {
-            background: match status {
-                Status::Active => {
-                    if active {
-                        Some(Background::Color(Color::from_rgb(0.2, 0.2, 0.2)))
-                    } else {
-                        Some(Background::Color(Color::from_rgb(0.1, 0.1, 0.1)))
-                    }
-                }
-                Status::Hovered => Some(Background::Color(Color::from_rgb(0.2, 0.2, 0.2))),
-                Status::Disabled => Some(Background::Color(Color::from_rgb(0.2, 0.2, 0.2))),
-                Status::Pressed => Some(Background::Color(Color::from_rgb(0.3, 0.3, 0.3))),
-            },
-            text_color: Color::from_rgb(0.8, 0.8, 0.8),
+        .style(move |_theme: &Theme, _status| button::Style {
             border: Border {
                 radius: 10.into(),
                 ..Default::default()

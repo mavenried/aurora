@@ -47,7 +47,7 @@ pub async fn handle_client(
             .await;
 
             loop {
-                std::thread::sleep(Duration::from_millis(500));
+                std::thread::sleep(Duration::from_millis(200));
                 if status(&writer, &state).await.is_err() {
                     break;
                 }
