@@ -1,3 +1,3 @@
 [workspace]
 resolver = "3"
-members = ["daemon", "slint-app", "iced-app", "protocol"]
+members = ["daemon", "app", "protocol"]

@@ -1,0 +1,86 @@
+import { NowPlayingView } from "NowPlayingView.slint";
+import { Song, Theme } from "Types.slint";
+import { ScrollView } from "CustomComp.slint";
+
+
+export component QueueView inherits Rectangle {
+    in property <[Song]> queue;
+    callback queue-click(int);
+    callback queue-remove(int);
+    callback queue-clear();
+
+    width: 400px;
+    background: Theme.bg1;
+    border-radius: 15px;
+    clip: true;
+
+    VerticalLayout {
+        HorizontalLayout {
+            padding: 5px;
+            alignment: LayoutAlignment.space-between;
+
+            Rectangle {
+                width: 60px;
+                height: 30px;
+                background: Theme.bg1;
+                border-radius: 10px;
+
+                Text {
+                    text: "Queue";
+                    color: Theme.text;
+                    font-size: 15px;
+                }
+            }
+
+            Rectangle {
+                width: 60px;
+                height: 30px;
+                background: button.has-hover ? Theme.bg3 : Theme.bg1;
+                animate background { duration: 100ms; }
+                border-radius: 10px;
+                button := TouchArea {
+                    clicked => {
+                        root.queue-clear();
+                    }
+                }
+
+                Text {
+                    text: "Clear";
+                    color: Theme.text;
+                    font-size: 15px;
+                }
+            }
+        }
+
+        scroll := ScrollView {
+            content-height: 105px * queue.length - 5px;
+            transform-rotation: 180deg;
+            background: Theme.bg2;
+
+            VerticalLayout {
+                spacing: 5px;
+                for item[i] in queue: NowPlayingView {
+                    transform-rotation: 180deg;
+                    Artists: item.artists;
+                    AlbumArt: item.album_art;
+                    Title: item.title;
+                    border-radius: 0px;
+                    background: touch.has-hover ? Theme.bg3 : Theme.bg2;
+                    animate background { duration: 200ms; }
+                    touch := TouchArea {
+                        width: parent.width;
+                        height: parent.height;
+                            //scroll.viewport-y = 0;
+                        pointer-event(event) => {
+                            if event.button == PointerEventButton.right && event.kind == PointerEventKind.down {
+                                queue-remove(i);
+                            } else if event.button == PointerEventButton.left && event.kind == PointerEventKind.down {
+                                queue-click(i);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

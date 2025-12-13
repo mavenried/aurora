@@ -1,0 +1,31 @@
+export struct CurrentSong {
+    title: string,
+    artists: string,
+    position: int,
+    duration: int,
+    is_paused: bool,
+    song_uuid: string,
+    album_art: image,
+}
+export struct Song {
+    title: string,
+    artists: string,
+    album_art: image,
+    id: string,
+}
+
+export struct Playlist {
+    title: string,
+    length: int,
+    id: string,
+}
+
+export global Theme {
+    in-out property <color> accent: #cba6f7;
+    in-out property <color> bg0: #11111b;
+    in-out property <color> bg1: #181825;
+    in-out property <color> bg2: #1e1e2e;
+    in-out property <color> bg3: #313244;
+    in-out property <color> text: #cdd6f4;
+    in-out property <color> text2: #a6adc8;
+}
