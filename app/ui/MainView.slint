@@ -30,10 +30,20 @@ export component SearchView inherits VerticalBox {
                 border-width: 1px;
                 HorizontalBox {
                     padding: 10px;
-                    Image {
-                        source: @image-url("../../assets/search.png");
+                    // Image {
+                    //     source: @image-url("../../assets/search.png");
+                    //     height: parent.height - 20px;
+                    //     width: parent.height - 20px;
+                    // }
+
+                    Text {
+                        text: " ";
                         height: parent.height - 20px;
                         width: parent.height - 20px;
+                        font-size: 20px;
+                        vertical-alignment: center;
+                        horizontal-alignment: center;
+                        color: Theme.bg4;
                     }
 
                     TextInput {
