@@ -1,4 +1,5 @@
-use crate::types::State;
+use crate::{helpers::send_to_all, types::State};
+use aurora_protocol::{Response, Song};
 use mpris_server::Player;
 use tokio::sync::mpsc::{self, UnboundedSender};
 
@@ -28,11 +29,19 @@ pub async fn init(state: State) -> anyhow::Result<()> {
                 let mut state_locked = state.lock().await;
                 state_locked.next(1).await;
                 state_locked.add().await;
+
+                let queue = state_locked.queue.clone().iter().map(Song::from).collect();
+                drop(state_locked);
+                send_to_all(&state, &Response::Queue(queue)).await?
             }
             PlayerCommand::Prev => {
                 let mut state_locked = state.lock().await;
                 state_locked.prev(1).await;
                 state_locked.add().await;
+
+                let queue = state_locked.queue.clone().iter().map(Song::from).collect();
+                drop(state_locked);
+                send_to_all(&state, &Response::Queue(queue)).await?
             }
         }
     }

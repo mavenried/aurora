@@ -12,7 +12,6 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Status {
     pub current_song: Option<Song>,
-    pub current_idx: usize,
     pub is_paused: bool,
     pub position: Duration,
 }

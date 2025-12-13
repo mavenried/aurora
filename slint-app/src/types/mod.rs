@@ -39,6 +39,5 @@ pub struct StateStruct {
     pub queue_waitlist: Vec<Uuid>,
     pub search_waitlist: Vec<Uuid>,
     pub playlist_waitlist: Vec<Uuid>,
-    pub cur_idx: usize,
     pub search_results: Vec<Song>,
 }

@@ -26,7 +26,7 @@ pub async fn enqueue(stream: &WriteSocket, state: &State, song_uuid: Uuid) -> an
 
     let should_start = state_locked.queue.is_empty();
 
-    state_locked.queue.push(song.clone());
+    state_locked.queue.push_back(song.clone());
 
     if should_start {
         state_locked.add().await;

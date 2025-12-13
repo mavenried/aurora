@@ -12,7 +12,7 @@ use crate::{
 mod albumart;
 mod clear;
 mod enqueue;
-mod next_prev;
+pub mod next_prev;
 mod pause;
 mod playlist;
 mod replace_queue;
@@ -49,6 +49,7 @@ pub async fn handle_client(
             loop {
                 std::thread::sleep(Duration::from_millis(200));
                 if status(&writer, &state).await.is_err() {
+                    tracing::error!("Status notifier failed for a client");
                     break;
                 }
             }

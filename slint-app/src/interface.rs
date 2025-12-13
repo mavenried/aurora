@@ -69,11 +69,6 @@ async fn unix_recver(
                     state_locked.default_art_buffer.clone()
                 };
 
-                if status.current_idx != state_locked.cur_idx {
-                    state_locked.cur_idx = status.current_idx;
-                    state_locked.update_queue(app.clone()).await;
-                }
-
                 drop(state_locked);
 
                 let _ = app.upgrade_in_event_loop(move |aurora| {
@@ -171,7 +166,6 @@ pub async fn interface(app: slint::Weak<AuroraPlayer>) -> anyhow::Result<()> {
         queue_waitlist: vec![],
         search_waitlist: vec![],
         playlist_waitlist: vec![],
-        cur_idx: 0,
     }));
 
     let state_clone = state.clone();
@@ -223,7 +217,7 @@ pub async fn interface(app: slint::Weak<AuroraPlayer>) -> anyhow::Result<()> {
             tokio::spawn(async move {
                 let state = state.lock().await;
                 let mut queue = state.queue.clone();
-                queue.remove((state.cur_idx + n as usize + 1) % queue.len());
+                queue.remove(n as usize + 1);
                 let req = Request::ReplaceQueue(queue);
                 let _ = state.writer_tx.send(req).await;
             });

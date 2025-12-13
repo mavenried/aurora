@@ -1,6 +1,7 @@
 use daemonize::Daemonize;
 use signal_hook::{consts::TERM_SIGNALS, iterator::Signals};
 use std::{
+    collections::VecDeque,
     env::args,
     fs::{File, remove_file},
     path::PathBuf,
@@ -11,9 +12,11 @@ use tokio::{net::UnixListener, sync::Mutex};
 
 mod handlers;
 mod helpers;
-mod mpris_thread;
 mod types;
+
+mod mpris_thread;
 mod watcher_thread;
+
 use types::*;
 
 const PIDFILE: &str = "/tmp/aurora-daemon.pid";
@@ -49,9 +52,10 @@ async fn async_main() -> std::io::Result<()> {
 
         #[allow(clippy::never_loop)]
         for sig in signals.forever() {
+            tracing::info!("Received signal {:?}, cleaning up SOCK file.", sig);
+            remove_file(SOCKFILE).ok();
             tracing::info!("Received signal {:?}, cleaning up PID file.", sig);
             remove_file(PIDFILE).ok();
-            remove_file(SOCKFILE).ok();
             std::process::exit(0);
         }
     });
@@ -64,10 +68,10 @@ async fn async_main() -> std::io::Result<()> {
     helpers::generate_index(&dirs::home_dir().unwrap().join("Music")).await?;
 
     let index = helpers::load_index().await?;
+
     let state = Arc::new(Mutex::new(StateStruct {
-        current_idx: 0,
         current_song: None,
-        queue: Vec::new(),
+        queue: VecDeque::new(),
         clients: vec![],
         index,
         sink: Arc::new(sink),
@@ -85,6 +89,7 @@ async fn async_main() -> std::io::Result<()> {
         std::process::exit(1)
     });
     tracing::info!("{listener:?}");
+
     loop {
         let (socket, addr) = listener.accept().await?;
         let (reader, w) = socket.into_split();

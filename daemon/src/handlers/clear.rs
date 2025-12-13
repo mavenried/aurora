@@ -10,5 +10,6 @@ pub async fn clear(state: &State) -> anyhow::Result<()> {
     let resp = Response::Queue(state_locked.queue.iter().map(Song::from).collect());
     drop(state_locked);
     send_to_all(state, &resp).await?;
+
     Ok(())
 }

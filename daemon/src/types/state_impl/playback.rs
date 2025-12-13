@@ -5,16 +5,12 @@ impl StateStruct {
         if self.queue.is_empty() {
             return GetReturn::QueueEmpty;
         }
+        for _ in 0..n {
+            let song = self.queue.pop_back().unwrap();
+            self.queue.push_front(song);
+        }
 
-        let prev_idx = match self.current_song {
-            None => 0,
-            Some(_) => {
-                (self.current_idx + self.queue.len() - (n % self.queue.len())) % self.queue.len()
-            }
-        };
-
-        self.current_idx = prev_idx;
-        self.current_song.replace(self.queue[prev_idx].clone());
+        self.current_song.replace(self.queue[0].clone());
         tracing::info!("Prev");
         GetReturn::Ok
     }
@@ -24,13 +20,12 @@ impl StateStruct {
             return GetReturn::QueueEmpty;
         }
 
-        let next_idx = match self.current_song {
-            None => 0,
-            Some(_) => (self.current_idx + n) % self.queue.len(),
-        };
+        for _ in 0..n {
+            let song = self.queue.pop_front().unwrap();
+            self.queue.push_back(song);
+        }
 
-        self.current_idx = next_idx;
-        self.current_song.replace(self.queue[next_idx].clone());
+        self.current_song.replace(self.queue[0].clone());
         tracing::info!("Next");
         GetReturn::Ok
     }

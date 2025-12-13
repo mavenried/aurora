@@ -31,10 +31,11 @@ pub async fn replace_queue(
         queue_out.push(songmeta);
     }
 
-    state_locked.clear().await;
-    state_locked.current_idx = 1;
-    state_locked.queue = queue_out;
-    state_locked.prev(1).await;
+    state_locked.queue = queue_out.into();
+
+    if state_locked.current_song.is_none() {
+        state_locked.add().await;
+    }
 
     let resp = Response::Queue(state_locked.queue.iter().map(Song::from).collect());
     drop(state_locked);

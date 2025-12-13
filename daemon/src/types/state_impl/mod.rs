@@ -1,13 +1,13 @@
 use crate::types::{GetReturn, SongIndex, WriteSocket};
 use aurora_protocol::{Song, SongMeta, Status};
 use rodio::Sink;
+use std::collections::VecDeque;
 use std::sync::Arc;
 use std::time::Duration;
 
 pub struct StateStruct {
     pub current_song: Option<SongMeta>,
-    pub queue: Vec<SongMeta>,
-    pub current_idx: usize,
+    pub queue: VecDeque<SongMeta>,
     pub index: SongIndex,
     pub sink: Arc<Sink>,
     pub clients: Vec<WriteSocket>,
@@ -25,7 +25,6 @@ impl StateStruct {
                 .current_song
                 .clone()
                 .map(|songmeta| Song::from(&songmeta)),
-            current_idx: self.current_idx,
             is_paused: self.is_paused(),
             position: if let Some(audio) = &self.audio {
                 audio.get_position()
@@ -62,7 +61,6 @@ impl StateStruct {
         self.sink.clear();
         self.queue.clear();
         self.current_song = None;
-        self.current_idx = 0;
         self.sink.play();
         self.audio = None;
     }

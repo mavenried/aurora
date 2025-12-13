@@ -8,7 +8,7 @@ pub async fn search(
 ) -> anyhow::Result<()> {
     let state = state.lock().await;
 
-    tracing::info!("Searching for {searchtype:?}");
+    tracing::debug!("Searching for {searchtype:?}");
     let songs = state
         .search(searchtype)
         .await

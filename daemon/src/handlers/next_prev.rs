@@ -15,6 +15,7 @@ pub async fn next(stream: &WriteSocket, state: &State, n: usize) -> anyhow::Resu
     let queue = state_locked.queue.iter().map(Song::from).collect();
     drop(state_locked);
     let _ = send_to_all(state, &Response::Queue(queue)).await;
+
     Ok(())
 }
 

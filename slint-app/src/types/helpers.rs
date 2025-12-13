@@ -30,13 +30,7 @@ impl StateStruct {
         tracing::info!("Redraw Queue");
         let mut img_data = vec![];
 
-        let mut queue: Vec<aurora_protocol::Song> = self
-            .queue
-            .clone()
-            .into_iter()
-            .skip(self.cur_idx + 1)
-            .collect();
-        queue.extend(self.queue.clone().into_iter().take(self.cur_idx));
+        let queue: Vec<aurora_protocol::Song> = self.queue.clone().into_iter().skip(1).collect();
 
         for song in queue.clone() {
             img_data.push(self.get_album_art(ImageFor::Queue(song.id)).await.clone())

@@ -10,6 +10,7 @@ use aurora_protocol::Response;
 const DEFAULT_ERR_ART: &[u8] = include_bytes!("../../assets/noart.png");
 
 pub async fn albumart(stream: &WriteSocket, state: &State, song_uuid: Uuid) -> anyhow::Result<()> {
+    tracing::debug!("Requested albumart for {song_uuid}");
     let index = state.lock().await.index.clone();
     let Some(songmeta) = index.get(&song_uuid) else {
         send_to_client(
