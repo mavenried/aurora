@@ -53,30 +53,27 @@ export component QueueView inherits Rectangle {
         }
 
         scroll := ScrollView {
-            content-height: 105px * queue.length - 5px;
+            content-height: 100px * queue.length;
             transform-rotation: 180deg;
             background: Theme.bg2;
 
-            VerticalLayout {
-                spacing: 5px;
-                for item[i] in queue: NowPlayingView {
-                    transform-rotation: 180deg;
-                    Artists: item.artists;
-                    AlbumArt: item.album_art;
-                    Title: item.title;
-                    border-radius: 0px;
-                    background: touch.has-hover ? Theme.bg3 : Theme.bg2;
-                    animate background { duration: 200ms; }
-                    touch := TouchArea {
-                        width: parent.width;
-                        height: parent.height;
+            for item[i] in queue: NowPlayingView {
+                transform-rotation: 180deg;
+                Artists: item.artists;
+                AlbumArt: item.album_art;
+                Title: item.title;
+                border-radius: 0px;
+                background: touch.has-hover ? Theme.bg3 : Theme.bg2;
+                animate background { duration: 200ms; }
+                touch := TouchArea {
+                    width: parent.width;
+                    height: parent.height;
                             //scroll.viewport-y = 0;
                         pointer-event(event) => {
-                            if event.button == PointerEventButton.right && event.kind == PointerEventKind.down {
-                                queue-remove(i);
-                            } else if event.button == PointerEventButton.left && event.kind == PointerEventKind.down {
-                                queue-click(i);
-                            }
+                        if event.button == PointerEventButton.right && event.kind == PointerEventKind.down {
+                            queue-remove(i);
+                        } else if event.button == PointerEventButton.left && event.kind == PointerEventKind.down {
+                            queue-click(i);
                         }
                     }
                 }

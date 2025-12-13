@@ -115,8 +115,8 @@ async fn unix_recver(
             }
             Response::SearchResults(mut results) => {
                 tracing::info!("Received: SearchResults, len:{}", results.len());
-                if results.len() > 300 {
-                    results = results[..300].to_vec();
+                if results.len() > 100 {
+                    results = results[..100].to_vec();
                 }
                 let mut state = state.lock().await;
                 state.search_results = results;

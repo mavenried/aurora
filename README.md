@@ -13,4 +13,4 @@ Indev by [@mavenried](https://github.com/mavenried).
 - [x] rotate queue on next instead of changing index (ended up switching to a vecdeque)
 - [ ] playlists page
 - [ ] hot reloadable themes (json configs?)
-- [ ] fix that weird stutter when adding songs.
+- [x] fix that weird stutter when adding songs.
