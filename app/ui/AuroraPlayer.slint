@@ -4,7 +4,7 @@ import { MainView } from "MainView.slint";
 import { NowPlayingView } from "NowPlayingView.slint";
 import { PlayerView } from "PlayerView.slint";
 import { CurrentSong, Song, Theme } from "Types.slint";
-import "../../assets/NotoSansJP-Regular.ttf";
+import "../assets/NotoSansJP-Regular.ttf";
 
 
 export component AuroraPlayer inherits Window {
@@ -20,7 +20,7 @@ export component AuroraPlayer inherits Window {
 
     in-out property <string> Title: "Nothing Playing";
     in-out property <string> Artists: "No artist";
-    in-out property <image> AlbumArt: @image-url("../../assets/placeholder.png");
+    in-out property <image> AlbumArt: @image-url("../assets/placeholder.png");
     in-out property <int> position: 0;
     in-out property <bool> is_paused: true;
     in-out property <int> duration: 0;

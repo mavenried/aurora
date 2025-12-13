@@ -3,7 +3,7 @@ slint::include_modules!();
 mod interface;
 mod types;
 
-const DEFAULT_ART: &[u8] = include_bytes!("../../assets/placeholder.png");
+const DEFAULT_ART: &[u8] = include_bytes!("../assets/placeholder.png");
 
 #[tokio::main]
 async fn main() -> Result<(), slint::PlatformError> {
