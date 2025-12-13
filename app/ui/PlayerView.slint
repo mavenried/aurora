@@ -41,45 +41,87 @@ export component PlayerView inherits Rectangle {
                 }
             }
 
-            HorizontalLayout {
+            VerticalLayout {
                 alignment: LayoutAlignment.center;
-                spacing: 5px;
+                HorizontalLayout {
+                    alignment: LayoutAlignment.center;
+                    spacing: 10px;
 
-                Image {
-                    source: @image-url("../../assets/prev.png");
-                    width: 50px;
-                    height: 50px;
-                    TouchArea {
-                        height: parent.height;
-                        width: parent.width;
-                        clicked => {
-                            prev()
+                    Rectangle {
+                        width: 40px;
+                        height: 40px;
+                        border-radius: 20px;
+                        background: prevTA.has-hover ? Theme.bg4 : Theme.bg3;
+                        animate background { duration: 100ms; }
+                        Text {
+                            vertical-alignment: TextVerticalAlignment.center;
+                            horizontal-alignment: TextHorizontalAlignment.center;
+                            width: 40px;
+                            height: 40px;
+
+                            text: "󰒮";
+                            font-size: 30px;
+                            color: Theme.buttons;
+                        }
+
+                        prevTA := TouchArea {
+                            height: parent.height;
+                            width: parent.width;
+                            clicked => {
+                                prev()
+                            }
                         }
                     }
-                }
 
-                Image {
-                    source: is-paused ? @image-url("../../assets/play.png") : @image-url("../../assets/pause.png");
-                    width: 50px;
-                    height: 50px;
-                    TouchArea {
-                        height: parent.height;
-                        width: parent.width;
-                        clicked => {
-                            pause()
+                    Rectangle {
+                        width: 40px;
+                        height: 40px;
+                        border-radius: 20px;
+                        background: playTA.has-hover ? Theme.bg4 : Theme.bg3;
+                        animate background { duration: 100ms; }
+                        Text {
+                            vertical-alignment: TextVerticalAlignment.center;
+                            horizontal-alignment: TextHorizontalAlignment.center;
+                            width: 40px;
+                            height: 40px;
+
+                            text: root.is-paused ? "" : "";
+                            font-size: root.is-paused ? 25px : 30px;
+                            color: Theme.buttons;
+                        }
+
+                        playTA := TouchArea {
+                            height: parent.height;
+                            width: parent.width;
+                            clicked => {
+                                pause();
+                            }
                         }
                     }
-                }
 
-                Image {
-                    source: @image-url("../../assets/next.png");
-                    width: 50px;
-                    height: 50px;
-                    TouchArea {
-                        height: parent.height;
-                        width: parent.width;
-                        clicked => {
-                            next()
+                    Rectangle {
+                        width: 40px;
+                        height: 40px;
+                        border-radius: 20px;
+                        background: nextTA.has-hover ? Theme.bg4 : Theme.bg3;
+                        animate background { duration: 100ms; }
+                        Text {
+                            vertical-alignment: TextVerticalAlignment.center;
+                            horizontal-alignment: TextHorizontalAlignment.center;
+                            width: 40px;
+                            height: 40px;
+
+                            text: "󰒭";
+                            font-size: 30px;
+                            color: Theme.buttons;
+                        }
+
+                        nextTA := TouchArea {
+                            height: parent.height;
+                            width: parent.width;
+                            clicked => {
+                                next()
+                            }
                         }
                     }
                 }

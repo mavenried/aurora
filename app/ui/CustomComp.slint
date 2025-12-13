@@ -53,15 +53,9 @@ export component CustomSlider inherits Rectangle {
 
     animate normalizedDisplayValue { duration: 100ms; }
 
-    private property <bool> skippedValueUpdate--flag: false;
-
     changed value => {
         if !root.pressed {
-            if root.skippedValueUpdate--flag {
-                root.displayValue = root.value;
-            } else {
-                root.skippedValueUpdate--flag = true;
-            }
+            root.displayValue = root.value;
         }
     }
 
@@ -79,11 +73,10 @@ export component CustomSlider inherits Rectangle {
             padding: 0px;
             width: track.width;
             visible: touch.has-hover;
-            opacity: 30%;
 
             Rectangle {
                 width: track.width * root.normalizedDisplayHoverValue;
-                background: Theme.text2;
+                background: Theme.bg4;
                 border-radius: track.border-radius;
             }
         }
@@ -117,7 +110,6 @@ export component CustomSlider inherits Rectangle {
             }
             if (event.kind == PointerEventKind.up) {
                 root.pressed = false;
-                root.skippedValueUpdate--flag = false;
                 root.released(root.displayValue);
             }
         }
