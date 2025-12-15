@@ -10,18 +10,9 @@ export component SearchView inherits VerticalBox {
     callback item-clicked(string);
 
     VerticalLayout {
-        transform-rotation: 180deg;
         spacing: 5px;
-        SongList {
-            transform-rotation: 180deg;
-            items: searchResults;
-            item-clicked(id) => {
-                item-clicked(id);
-            }
-        }
 
         HorizontalLayout {
-            transform-rotation: 180deg;
             spacing: 5px;
             Rectangle {
                 border-radius: 10px;
@@ -30,11 +21,6 @@ export component SearchView inherits VerticalBox {
                 border-width: 1px;
                 HorizontalBox {
                     padding: 10px;
-                    // Image {
-                    //     source: @image-url("../../assets/search.png");
-                    //     height: parent.height - 20px;
-                    //     width: parent.height - 20px;
-                    // }
 
                     Text {
                         text: " ";
@@ -61,6 +47,17 @@ export component SearchView inherits VerticalBox {
             ComboBox {
                 model: ["By Artist", "By Title"];
                 current <=> searchMode;
+                changed current => {
+                    submit(query, searchMode);
+                }
+            }
+        }
+
+        SongList {
+            z: -1;
+            items: searchResults;
+            item-clicked(id) => {
+                item-clicked(id);
             }
         }
     }

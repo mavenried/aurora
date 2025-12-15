@@ -51,7 +51,10 @@ export component CustomSlider inherits Rectangle {
     private property <float> normalizedValue: (value - minimum) / (maximum - minimum);
     private property <bool> pressed: false;
 
-    animate normalizedDisplayValue { duration: 100ms; }
+    animate normalizedDisplayValue {
+        duration: 190ms;
+        easing: ease;
+    }
 
     changed value => {
         if !root.pressed {
@@ -164,7 +167,7 @@ export component ComboBox {
         width: parent.width;
         height: parent.height;
         background: Theme.bg2;
-        border-radius: 10px;
+        border-radius: 15px;
         TouchArea {
             width: parent.width;
             height: parent.height;
@@ -198,11 +201,11 @@ export component ComboBox {
 
     box := Rectangle {
         background: Theme.bg2;
-        border-width: 1px;
+        border-width: 2px;
         border-color: Theme.accent;
         y: parent.height + 5px;
         height: 0px;
-        border-radius: 10px;
+        border-radius: 15px;
         clip: true;
         animate height {
             duration: 100ms;
@@ -214,7 +217,7 @@ export component ComboBox {
             width: parent.width;
             for item[i] in model: Rectangle {
                 width: parent.width - 10px;
-                border-radius: 10px;
+                border-radius: 15px;
                 height: 50px;
 
                 background: item == root.current ? Theme.bg3 : Theme.bg2;
@@ -246,7 +249,7 @@ export component PlList inherits VerticalLayout {
     in property <[Playlist]> items;
     callback item-clicked(string);
     Rectangle {
-        border-radius: 10px;
+        border-radius: 15px;
         clip: true;
         ScrollView {
             content-height: 65px * items.length - 5px;
@@ -255,7 +258,7 @@ export component PlList inherits VerticalLayout {
                 spacing: 5px;
                 padding: 0px;
                 for item[i] in items: Rectangle {
-                    border-radius: 10px;
+                    border-radius: 15px;
                     background: touch.has-hover ? Theme.bg3 : Theme.bg2;
                     animate background { duration: 100ms; }
                     touch := TouchArea {
@@ -301,7 +304,7 @@ export component SongList inherits VerticalLayout {
     in property <[Song]> items;
     callback item-clicked(string);
     Rectangle {
-        border-radius: 10px;
+        border-radius: 15px;
         clip: true;
         ScrollView {
             content-height: 65px * items.length - 5px;
@@ -310,7 +313,7 @@ export component SongList inherits VerticalLayout {
                 spacing: 5px;
                 padding: 0px;
                 for item[i] in items: Rectangle {
-                    border-radius: 10px;
+                    border-radius: 15px;
                     background: touch.has-hover ? Theme.bg3 : Theme.bg2;
                     animate background { duration: 100ms; }
                     touch := TouchArea {
@@ -326,7 +329,7 @@ export component SongList inherits VerticalLayout {
                         Rectangle {
                             height: 50px;
                             width: 50px;
-                            border-radius: 10px;
+                            border-radius: 15px;
                             clip: true;
                             Image {
                                 source: item.album_art;
