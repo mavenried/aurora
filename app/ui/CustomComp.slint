@@ -211,13 +211,17 @@ export component ComboBox {
             duration: 100ms;
             easing: ease-in-out-quad;
         }
+        drop-shadow-color: Theme.bg0;
+        drop-shadow-blur: 10px;
+        TouchArea { }
+
         VerticalLayout {
             spacing: 5px;
             padding: 5px;
             width: parent.width;
             for item[i] in model: Rectangle {
                 width: parent.width - 10px;
-                border-radius: 15px;
+                border-radius: 10px;
                 height: 50px;
 
                 background: item == root.current ? Theme.bg3 : Theme.bg2;
