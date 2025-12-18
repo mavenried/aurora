@@ -1,6 +1,6 @@
 import { VerticalBox, HorizontalBox } from "std-widgets.slint";
 import { ComboBox, SongList, PlList } from "CustomComp.slint";
-import { Song, Playlist, Theme }from "Types.slint";
+import { Song, PlaylistMinimal, Playlist, Theme }from "Types.slint";
 
 export component SearchView inherits VerticalBox {
     in-out property <string> searchMode: "By Title";
@@ -64,9 +64,10 @@ export component SearchView inherits VerticalBox {
 }
 
 export component PlaylistView inherits VerticalBox {
-    in property <[Playlist]> playlists;
-    in property <[Song]> playlistResults;
-    in-out property <string> in-playlist;
+    in property <[PlaylistMinimal]> playlists;
+    in-out property <bool> in-playlist;
+    in-out property <Playlist> current-playlist;
+    callback get-playlist(string);
     padding: 10px;
     // Text {
     //     text: "Playlists";
@@ -74,22 +75,23 @@ export component PlaylistView inherits VerticalBox {
     //     font-size: 30px;
     // }
 
-    if (in-playlist == ""): PlList {
+    if (!in-playlist): PlList {
         items: playlists;
         item-clicked(id) => {
-            root.in-playlist = id;
+            get-playlist(id);
+            in-playlist = true;
         }
     }
 
-    if (in-playlist != ""): VerticalLayout {
+    if (in-playlist): VerticalLayout {
         Text {
-            text: in-playlist;
+            text: current-playlist.title;
             color: Theme.text;
             font-size: 30px;
         }
 
         SongList {
-            items: playlistResults;
+            items: current-playlist.songs;
         }
     }
 }
@@ -99,7 +101,8 @@ export component MainView inherits Rectangle {
     border-radius: 15px;
     in property <string> active-view;
     in property <[Song]> searchResults;
-    in property <[Playlist]> playlists;
+    in property <[PlaylistMinimal]> playlists;
+    in property <Playlist> current-playlist;
     in property <bool> searchOverflow;
     callback query-submit(string, string);
     callback add(string);
@@ -120,11 +123,14 @@ export component MainView inherits Rectangle {
 
     plView := PlaylistView {
         visible: active-view == "Playlists";
-
+        current-playlist: root.current-playlist;
         playlists: root.playlists;
+        get-playlist(id) => {
+            get-playlist(id)
+        }
     }
 
     changed active-view => {
-        plView.in-playlist = ""
+        plView.in-playlist = false
     }
 }

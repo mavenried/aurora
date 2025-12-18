@@ -3,7 +3,13 @@ import { TabSelectorView } from "TabSelectorView.slint";
 import { MainView } from "MainView.slint";
 import { NowPlayingView } from "NowPlayingView.slint";
 import { PlayerView } from "PlayerView.slint";
-import { CurrentSong, Song, Theme, Playlist } from "Types.slint";
+import {
+    CurrentSong,
+    Song,
+    Theme,
+    PlaylistMinimal,
+    Playlist,
+} from "Types.slint";
 import "../assets/NotoSansJP-Regular.ttf";
 import "../assets/JetBrainsMonoNerdFont-Regular.ttf";
 
@@ -19,6 +25,7 @@ export component AuroraPlayer inherits Window {
     callback search(string, string);
     callback add(string);
     callback refresh-playlists();
+    callback select-playlist(string);
 
     in-out property <string> Title: "Nothing Playing";
     in-out property <string> Artists: "No artist";
@@ -29,7 +36,12 @@ export component AuroraPlayer inherits Window {
 
     in-out property <[Song]> queue;
     in-out property <[Song]> searchResults;
-    in-out property <[Playlist]> playlistsList;
+    in-out property <[PlaylistMinimal]> playlistsList;
+    in-out property <Playlist> playlistResult: {
+        title: "Playlist Test",
+        id:"id",
+        songs: [{ album-art:  @image-url("../assets/placeholder.png"), title: "Song", artists: "Artist" }]
+    };
 
     in-out property <string> active-view: "Search";
 
@@ -88,6 +100,7 @@ export component AuroraPlayer inherits Window {
                 MainView {
                     active-view: root.active-view;
                     searchResults: root.searchResults;
+current-playlist: root.playlistResult;
                     playlists: root.playlistsList;
                     query-submit(q, e) => {
                         search(q, e);
@@ -95,6 +108,7 @@ export component AuroraPlayer inherits Window {
                     add(s) => {
                         root.add(s);
                     }
+                    get-playlist(s) => select-playlist(s);
                 }
 
                 PlayerView {

@@ -3,7 +3,7 @@ use std::rc::Rc;
 use aurora_protocol::Request;
 use slint::{Image, ModelRc, Rgba8Pixel, SharedPixelBuffer, VecModel, Weak};
 
-use crate::{AuroraPlayer, Playlist, Song, types::*};
+use crate::{AuroraPlayer, Playlist, PlaylistMinimal, Song, types::*};
 
 impl StateStruct {
     pub async fn get_album_art(&mut self, req: ImageFor) -> SharedPixelBuffer<Rgba8Pixel> {
@@ -54,7 +54,7 @@ impl StateStruct {
         let _ = app.upgrade_in_event_loop(move |aurora: AuroraPlayer| {
             let mut songs = vec![];
             for playlist in results {
-                songs.push(Playlist {
+                songs.push(PlaylistMinimal {
                     title: playlist.name.clone().into(),
                     length: playlist.len as i32,
                     id: playlist.id.to_string().into(),
@@ -83,6 +83,37 @@ impl StateStruct {
                 })
             }
             aurora.set_searchResults(ModelRc::new(Rc::new(VecModel::from(songs))));
+        });
+    }
+    pub async fn update_playlist_results(&mut self, app: Weak<AuroraPlayer>) {
+        tracing::info!("Redraw Playlist Content Results");
+        let mut img_data = vec![];
+        let result = self.playlist_result.clone().unwrap();
+
+        for song in &result.songs {
+            img_data.push(
+                self.get_album_art(ImageFor::Playlist(song.id))
+                    .await
+                    .clone(),
+            )
+        }
+        let results = result.songs;
+        let _ = app.upgrade_in_event_loop(move |aurora: AuroraPlayer| {
+            let mut songs = vec![];
+            for (song, img) in results.iter().zip(img_data.iter()) {
+                songs.push(Song {
+                    title: song.title.clone().into(),
+                    artists: song.artists.join(", ").into(),
+                    album_art: Image::from_rgba8(img.clone()),
+                    id: song.id.to_string().into(),
+                })
+            }
+            let slint_playlist = Playlist {
+                title: result.title.into(),
+                id: result.id.to_string().into(),
+                songs: ModelRc::new(Rc::new(VecModel::from(songs))),
+            };
+            aurora.set_playlistResult(slint_playlist);
         });
     }
 }

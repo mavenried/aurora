@@ -1,5 +1,5 @@
 import { HorizontalBox, VerticalBox } from "std-widgets.slint";
-import { Song, Playlist, Theme } from "Types.slint";
+import { Song, PlaylistMinimal, Theme } from "Types.slint";
 
 export component ScrollView inherits Rectangle {
     in property <length> content-height;
@@ -250,14 +250,14 @@ export component ComboBox {
 }
 
 export component PlList inherits VerticalLayout {
-    in property <[Playlist]> items;
+    in property <[PlaylistMinimal]> items;
     callback item-clicked(string);
     Rectangle {
         border-radius: 15px;
         clip: true;
         ScrollView {
             content-height: 65px * items.length - 5px;
-            direction: 1;
+            direction: -1;
             box := VerticalBox {
                 spacing: 5px;
                 padding: 0px;
@@ -276,32 +276,21 @@ export component PlList inherits VerticalLayout {
                         padding-right: 20px;
                         Rectangle {
                             height: 100px;
-                            HorizontalLayout {
-                                VerticalLayout {
-                                    Text {
-                                        text: item.title;
-                                        color: Theme.text;
-                                        font-size: 30px;
-                                        vertical-alignment: center;
-                                        horizontal-alignment: left;
-                                    }
-
-                                    Text {
-                                        text: item.id;
-                                        color: Theme.text2;
-                                        font-size: 12px;
-                                        font-family: "JetbrainsMono Nerd Font";
-                                        vertical-alignment: center;
-                                        horizontal-alignment: left;
-                                    }
+                            VerticalLayout {
+                                Text {
+                                    text: item.title;
+                                    color: Theme.text;
+                                    font-size: 30px;
+                                    vertical-alignment: center;
+                                    horizontal-alignment: left;
                                 }
 
                                 Text {
-                                    text: item.length;
+                                    text: item.length + (item.length == 1 ? "  Song." : " Songs.");
                                     color: Theme.text2;
-                                    font-size: 15px;
+                                    font-size: 20px;
                                     vertical-alignment: center;
-                                    horizontal-alignment: right;
+                                    horizontal-alignment: left;
                                 }
                             }
                         }

@@ -15,10 +15,16 @@ export struct Song {
     id: string,
 }
 
-export struct Playlist {
+export struct PlaylistMinimal {
     title: string,
     length: int,
     id: string,
+}
+
+export struct Playlist {
+    id: string,
+    title: string,
+    songs: [Song]
 }
 
 export global Theme {

@@ -122,6 +122,16 @@ async fn unix_recver(
                 state.search_results = results;
                 state.update_search_results(app.clone()).await;
             }
+
+            Response::PlaylistResults(result) => {
+                tracing::info!("Received: PlaylistResults, len:{}", result.songs.len());
+                // if results.len() > 100 {
+                //     results = results[..100].to_vec();
+                // }
+                let mut state = state.lock().await;
+                state.playlist_result = Some(result);
+                state.update_playlist_results(app.clone()).await;
+            }
             Response::Picture { id, data } => {
                 tracing::info!("Received: Picture");
                 let decoded = BASE64_URL_SAFE.decode(data).unwrap();
@@ -174,7 +184,7 @@ pub async fn interface(app: slint::Weak<AuroraPlayer>) -> anyhow::Result<()> {
         search_waitlist: vec![],
         playlist_waitlist: vec![],
         playlist_list_results: vec![],
-        playlist_results: vec![],
+        playlist_result: None,
     }));
 
     let state_clone = state.clone();
@@ -259,6 +269,24 @@ pub async fn interface(app: slint::Weak<AuroraPlayer>) -> anyhow::Result<()> {
                     .send(Request::PlaylistList)
                     .await;
             });
+        });
+
+        let state = state_clone.clone();
+        aurora.on_select_playlist(move |id_str| {
+            tracing::info!("Called for new playlist {id_str}");
+            let state = state.clone();
+            if let Ok(id) = uuid::Uuid::parse_str(&id_str) {
+                tokio::spawn(async move {
+                    let _ = state
+                        .lock()
+                        .await
+                        .writer_tx
+                        .send(Request::PlaylistGet(id))
+                        .await;
+                });
+            } else {
+                tracing::error!("{id_str}")
+            }
         });
 
         let state = state_clone.clone();
