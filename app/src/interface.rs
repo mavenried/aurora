@@ -1,4 +1,4 @@
-use std::{path::PathBuf, process::Command, sync::Arc, time::Duration};
+use std::{path::PathBuf, process::Command, sync::Arc, time::Duration, vec};
 
 use aurora_protocol::{Request, Response, SearchType};
 use base64::{Engine, prelude::BASE64_URL_SAFE};
@@ -136,7 +136,14 @@ async fn unix_recver(
                 } else if state.playlist_waitlist.contains(&id) {
                 }
             }
-            _ => (),
+            Response::PlaylistList(plists) => {
+                tracing::info!("{plists:?}");
+                let mut state = state.lock().await;
+                state.playlist_list_results = plists;
+                state.update_search_results(app.clone()).await;
+                state.update_playlists(app.clone()).await;
+            }
+            other => tracing::info!("{other:?}"),
         }
     }
 }
@@ -166,6 +173,8 @@ pub async fn interface(app: slint::Weak<AuroraPlayer>) -> anyhow::Result<()> {
         queue_waitlist: vec![],
         search_waitlist: vec![],
         playlist_waitlist: vec![],
+        playlist_list_results: vec![],
+        playlist_results: vec![],
     }));
 
     let state_clone = state.clone();
@@ -236,6 +245,20 @@ pub async fn interface(app: slint::Weak<AuroraPlayer>) -> anyhow::Result<()> {
                     let _ = state.lock().await.writer_tx.send(query).await;
                 });
             }
+        });
+
+        let state = state_clone.clone();
+        aurora.on_refresh_playlists(move || {
+            let state = state.clone();
+
+            tokio::spawn(async move {
+                let _ = state
+                    .lock()
+                    .await
+                    .writer_tx
+                    .send(Request::PlaylistList)
+                    .await;
+            });
         });
 
         let state = state_clone.clone();

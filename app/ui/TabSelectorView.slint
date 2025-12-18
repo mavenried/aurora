@@ -2,6 +2,7 @@ import { Theme } from "Types.slint";
 export component TabButton inherits Rectangle {
     in-out property <string> active;
     in property <string> label;
+    callback button-clicked();
     Rectangle {
         background: active == label ? Theme.bg1 : Theme.bg2;
 
@@ -21,7 +22,8 @@ export component TabButton inherits Rectangle {
             height: parent.height;
             width: parent.width;
             clicked => {
-                active = label
+                active = label;
+                button-clicked();
             }
         }
     }
@@ -30,6 +32,7 @@ export component TabButton inherits Rectangle {
 export component TabSelectorView inherits Rectangle {
     in-out property <string> current-tab;
     in-out property <string> active-view;
+    callback refresh-playlists();
     height: 100px;
 
     Rectangle {
@@ -47,6 +50,9 @@ export component TabSelectorView inherits Rectangle {
             TabButton {
                 label: "Playlists";
                 active <=> active-view;
+                button-clicked => {
+                    refresh-playlists()
+                }
             }
         }
     }

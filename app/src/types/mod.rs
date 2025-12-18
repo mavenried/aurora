@@ -1,6 +1,6 @@
 use std::{num::NonZero, sync::Arc};
 
-use aurora_protocol::{Request, Song};
+use aurora_protocol::{PlaylistMinimal, Request, Song};
 use lru::LruCache;
 use slint::{Rgba8Pixel, SharedPixelBuffer};
 use tokio::sync::{Mutex, mpsc::Sender};
@@ -40,4 +40,6 @@ pub struct StateStruct {
     pub search_waitlist: Vec<Uuid>,
     pub playlist_waitlist: Vec<Uuid>,
     pub search_results: Vec<Song>,
+    pub playlist_list_results: Vec<PlaylistMinimal>,
+    pub playlist_results: Vec<Song>,
 }

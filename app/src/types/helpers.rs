@@ -3,7 +3,7 @@ use std::rc::Rc;
 use aurora_protocol::Request;
 use slint::{Image, ModelRc, Rgba8Pixel, SharedPixelBuffer, VecModel, Weak};
 
-use crate::{AuroraPlayer, Song, types::*};
+use crate::{AuroraPlayer, Playlist, Song, types::*};
 
 impl StateStruct {
     pub async fn get_album_art(&mut self, req: ImageFor) -> SharedPixelBuffer<Rgba8Pixel> {
@@ -46,6 +46,21 @@ impl StateStruct {
                 })
             }
             aurora.set_queue(ModelRc::new(Rc::new(VecModel::from(songs))));
+        });
+    }
+    pub async fn update_playlists(&mut self, app: Weak<AuroraPlayer>) {
+        tracing::info!("Redraw PL list");
+        let results = self.playlist_list_results.clone();
+        let _ = app.upgrade_in_event_loop(move |aurora: AuroraPlayer| {
+            let mut songs = vec![];
+            for playlist in results {
+                songs.push(Playlist {
+                    title: playlist.name.clone().into(),
+                    length: playlist.len as i32,
+                    id: playlist.id.to_string().into(),
+                })
+            }
+            aurora.set_playlistsList(ModelRc::new(Rc::new(VecModel::from(songs))));
         });
     }
 

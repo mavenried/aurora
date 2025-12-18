@@ -3,11 +3,12 @@ import { TabSelectorView } from "TabSelectorView.slint";
 import { MainView } from "MainView.slint";
 import { NowPlayingView } from "NowPlayingView.slint";
 import { PlayerView } from "PlayerView.slint";
-import { CurrentSong, Song, Theme } from "Types.slint";
+import { CurrentSong, Song, Theme, Playlist } from "Types.slint";
 import "../assets/NotoSansJP-Regular.ttf";
+import "../assets/JetBrainsMonoNerdFont-Regular.ttf";
 
 
-export  component AuroraPlayer inherits Window {
+export component AuroraPlayer inherits Window {
     callback queue-click(int);
     callback queue-remove(int);
     callback queue-clear();
@@ -17,6 +18,7 @@ export  component AuroraPlayer inherits Window {
     callback seek(float);
     callback search(string, string);
     callback add(string);
+    callback refresh-playlists();
 
     in-out property <string> Title: "Nothing Playing";
     in-out property <string> Artists: "No artist";
@@ -27,6 +29,7 @@ export  component AuroraPlayer inherits Window {
 
     in-out property <[Song]> queue;
     in-out property <[Song]> searchResults;
+    in-out property <[Playlist]> playlistsList;
 
     in-out property <string> active-view: "Search";
 
@@ -49,6 +52,9 @@ export  component AuroraPlayer inherits Window {
 
                 TabSelectorView {
                     active-view <=> root.active-view;
+                    refresh-playlists => {
+                        refresh-playlists()
+                    }
                 }
 
                 QueueView {
@@ -82,6 +88,7 @@ export  component AuroraPlayer inherits Window {
                 MainView {
                     active-view: root.active-view;
                     searchResults: root.searchResults;
+                    playlists: root.playlistsList;
                     query-submit(q, e) => {
                         search(q, e);
                     }

@@ -65,15 +65,32 @@ export component SearchView inherits VerticalBox {
 
 export component PlaylistView inherits VerticalBox {
     in property <[Playlist]> playlists;
+    in property <[Song]> playlistResults;
+    in-out property <string> in-playlist;
     padding: 10px;
-    Text {
-        text: "Playlists";
-        color: Theme.text;
-        font-size: 30px;
+    // Text {
+    //     text: "Playlists";
+    //     color: Theme.text;
+    //     font-size: 30px;
+    // }
+
+    if (in-playlist == ""): PlList {
+        items: playlists;
+        item-clicked(id) => {
+            root.in-playlist = id;
+        }
     }
 
-    PlList {
-        items: playlists;
+    if (in-playlist != ""): VerticalLayout {
+        Text {
+            text: in-playlist;
+            color: Theme.text;
+            font-size: 30px;
+        }
+
+        SongList {
+            items: playlistResults;
+        }
     }
 }
 
@@ -101,8 +118,13 @@ export component MainView inherits Rectangle {
         }
     }
 
-    PlaylistView {
+    plView := PlaylistView {
         visible: active-view == "Playlists";
+
         playlists: root.playlists;
+    }
+
+    changed active-view => {
+        plView.in-playlist = ""
     }
 }

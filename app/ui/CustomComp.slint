@@ -274,28 +274,36 @@ export component PlList inherits VerticalLayout {
                     HorizontalLayout {
                         padding: 5px;
                         padding-right: 20px;
-                        spacing: 10px;
                         Rectangle {
-                            height: 50px;
-                            width: 50px;
-                            border-radius: 10px;
-                            clip: true;
-                        }
+                            height: 100px;
+                            HorizontalLayout {
+                                VerticalLayout {
+                                    Text {
+                                        text: item.title;
+                                        color: Theme.text;
+                                        font-size: 30px;
+                                        vertical-alignment: center;
+                                        horizontal-alignment: left;
+                                    }
 
-                        Text {
-                            text: item.title;
-                            color: Theme.text;
-                            font-size: 20px;
-                            vertical-alignment: center;
-                            horizontal-alignment: left;
-                        }
+                                    Text {
+                                        text: item.id;
+                                        color: Theme.text2;
+                                        font-size: 12px;
+                                        font-family: "JetbrainsMono Nerd Font";
+                                        vertical-alignment: center;
+                                        horizontal-alignment: left;
+                                    }
+                                }
 
-                        Text {
-                            text: item.length;
-                            color: Theme.text2;
-                            font-size: 15px;
-                            vertical-alignment: center;
-                            horizontal-alignment: right;
+                                Text {
+                                    text: item.length;
+                                    color: Theme.text2;
+                                    font-size: 15px;
+                                    vertical-alignment: center;
+                                    horizontal-alignment: right;
+                                }
+                            }
                         }
                     }
                 }
