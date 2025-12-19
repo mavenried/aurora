@@ -6,12 +6,13 @@ import { PlayerView } from "PlayerView.slint";
 import {
     CurrentSong,
     Song,
+    Tabs,
     Theme,
     PlaylistMinimal,
     Playlist,
 } from "Types.slint";
-import "../assets/NotoSansJP-Regular.ttf";
-import "../assets/JetBrainsMonoNerdFont-Regular.ttf";
+import "../assets/NotoSans.ttf";
+import "../assets/JetbrainsMono.ttf";
 
 
 export component AuroraPlayer inherits Window {
@@ -40,10 +41,12 @@ export component AuroraPlayer inherits Window {
     in-out property <Playlist> playlistResult: {
         title: "Playlist Test",
         id:"id",
-        songs: [{ album-art:  @image-url("../assets/placeholder.png"), title: "Song", artists: "Artist" }]
+        songs: [
+            { album-art:  @image-url("../assets/placeholder.png"), title: "Song", artists: "Artist" }
+        ]
     };
 
-    in-out property <string> active-view: "Search";
+    in-out property <Tabs> active-view: Tabs.Playlists;
 
     title: "Aurora Player";
 
@@ -61,13 +64,6 @@ export component AuroraPlayer inherits Window {
             padding: 5px;
             VerticalLayout {
                 spacing: 5px;
-
-                TabSelectorView {
-                    active-view <=> root.active-view;
-                    refresh-playlists => {
-                        refresh-playlists()
-                    }
-                }
 
                 QueueView {
                     queue: root.queue;
@@ -97,10 +93,17 @@ export component AuroraPlayer inherits Window {
             VerticalLayout {
                 spacing: 5px;
 
+                TabSelectorView {
+                    active-view <=> root.active-view;
+                    refresh-playlists => {
+                        refresh-playlists()
+                    }
+                }
+
                 MainView {
                     active-view: root.active-view;
                     searchResults: root.searchResults;
-current-playlist: root.playlistResult;
+                    current-playlist: root.playlistResult;
                     playlists: root.playlistsList;
                     query-submit(q, e) => {
                         search(q, e);

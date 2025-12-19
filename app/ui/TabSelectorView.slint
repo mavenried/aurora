@@ -1,19 +1,20 @@
-import { Theme } from "Types.slint";
+import { Theme, Tabs } from "Types.slint";
 export component TabButton inherits Rectangle {
-    in-out property <string> active;
+    in-out property <Tabs> active;
     in property <string> label;
+    in property <Tabs> tab;
     callback button-clicked();
     Rectangle {
-        background: active == label ? Theme.bg1 : Theme.bg2;
+        background: active == tab ? Theme.bg1 : Theme.bg2;
 
-        animate background { duration: 100ms; }
-        animate border-color { duration: 100ms; }
+        animate background { duration: 200ms; }
+        animate border-color { duration: 200ms; }
         border-radius: 10px;
         Text {
             text: label;
-            color: active == label ? Theme.accent : Theme.text;
-            animate color { duration: 100ms; }
-            font-size: 20px;
+            color: active == tab ? Theme.accent : Theme.text;
+            animate color { duration: 200ms; }
+            font-size: 25px;
             vertical-alignment: center;
             horizontal-alignment: center;
         }
@@ -22,7 +23,7 @@ export component TabButton inherits Rectangle {
             height: parent.height;
             width: parent.width;
             clicked => {
-                active = label;
+                active = tab;
                 button-clicked();
             }
         }
@@ -30,25 +31,26 @@ export component TabButton inherits Rectangle {
 }
 
 export component TabSelectorView inherits Rectangle {
-    in-out property <string> current-tab;
-    in-out property <string> active-view;
+    in-out property <Tabs> active-view;
     callback refresh-playlists();
-    height: 100px;
+    height: 60px;
 
     Rectangle {
         background: Theme.bg2;
         border-radius: 15px;
 
-        VerticalLayout {
+        HorizontalLayout {
             padding: 5px;
             spacing: 5px;
             TabButton {
                 label: "Search";
+                tab: Tabs.Search;
                 active <=> active-view;
             }
 
             TabButton {
                 label: "Playlists";
+                tab: Tabs.Playlists;
                 active <=> active-view;
                 button-clicked => {
                     refresh-playlists()

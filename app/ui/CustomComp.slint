@@ -160,14 +160,12 @@ export component ComboBox {
     in-out property <[string]> model;
     in-out property <string> current;
     private property <bool> expanded: false;
-    width: 160px;
-    height: 50px;
 
     Rectangle {
         width: parent.width;
         height: parent.height;
         background: Theme.bg2;
-        border-radius: 15px;
+        border-radius: 10px;
         TouchArea {
             width: parent.width;
             height: parent.height;
@@ -205,7 +203,7 @@ export component ComboBox {
         border-color: Theme.accent;
         y: parent.height + 5px;
         height: 0px;
-        border-radius: 15px;
+        border-radius: 10px;
         clip: true;
         animate height {
             duration: 100ms;
@@ -253,7 +251,7 @@ export component PlList inherits VerticalLayout {
     in property <[PlaylistMinimal]> items;
     callback item-clicked(string);
     Rectangle {
-        border-radius: 15px;
+        border-radius: 10px;
         clip: true;
         ScrollView {
             content-height: 65px * items.length - 5px;
@@ -262,7 +260,8 @@ export component PlList inherits VerticalLayout {
                 spacing: 5px;
                 padding: 0px;
                 for item[i] in items: Rectangle {
-                    border-radius: 15px;
+                    height: 70px;
+                    border-radius: 10px;
                     background: touch.has-hover ? Theme.bg3 : Theme.bg2;
                     animate background { duration: 100ms; }
                     touch := TouchArea {
@@ -274,23 +273,23 @@ export component PlList inherits VerticalLayout {
                     HorizontalLayout {
                         padding: 5px;
                         padding-right: 20px;
+                        padding-left: 20px;
                         Rectangle {
-                            height: 100px;
-                            VerticalLayout {
+                            HorizontalLayout {
                                 Text {
                                     text: item.title;
                                     color: Theme.text;
                                     font-size: 30px;
-                                    vertical-alignment: center;
                                     horizontal-alignment: left;
+                                    vertical-alignment: center;
                                 }
 
                                 Text {
-                                    text: item.length + (item.length == 1 ? "  Song." : " Songs.");
+                                    text: item.length + (item.length == 1 ? "  song." : " songs.");
                                     color: Theme.text2;
                                     font-size: 20px;
+                                    horizontal-alignment: right;
                                     vertical-alignment: center;
-                                    horizontal-alignment: left;
                                 }
                             }
                         }
@@ -305,7 +304,7 @@ export component SongList inherits VerticalLayout {
     in property <[Song]> items;
     callback item-clicked(string);
     Rectangle {
-        border-radius: 15px;
+        border-radius: 10px;
         clip: true;
         ScrollView {
             content-height: 65px * items.length - 5px;
@@ -314,7 +313,7 @@ export component SongList inherits VerticalLayout {
                 spacing: 5px;
                 padding: 0px;
                 for item[i] in items: Rectangle {
-                    border-radius: 15px;
+                    border-radius: 10px;
                     background: touch.has-hover ? Theme.bg3 : Theme.bg2;
                     animate background { duration: 100ms; }
                     touch := TouchArea {
@@ -330,7 +329,7 @@ export component SongList inherits VerticalLayout {
                         Rectangle {
                             height: 50px;
                             width: 50px;
-                            border-radius: 15px;
+                            border-radius: 10px;
                             clip: true;
                             Image {
                                 source: item.album_art;

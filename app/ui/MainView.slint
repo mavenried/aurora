@@ -1,6 +1,6 @@
 import { VerticalBox, HorizontalBox } from "std-widgets.slint";
 import { ComboBox, SongList, PlList } from "CustomComp.slint";
-import { Song, PlaylistMinimal, Playlist, Theme }from "Types.slint";
+import { Song, PlaylistMinimal, Playlist, Theme, Tabs }from "Types.slint";
 
 export component SearchView inherits VerticalBox {
     in-out property <string> searchMode: "By Title";
@@ -8,6 +8,7 @@ export component SearchView inherits VerticalBox {
     in property <[Song]> searchResults;
     callback submit(string, string);
     callback item-clicked(string);
+    padding: 5px;
 
     VerticalLayout {
         spacing: 5px;
@@ -16,7 +17,7 @@ export component SearchView inherits VerticalBox {
             spacing: 5px;
             Rectangle {
                 border-radius: 10px;
-                height: 50px;
+                height: 60px;
                 background: Theme.bg1;
                 border-width: 1px;
                 HorizontalBox {
@@ -26,14 +27,15 @@ export component SearchView inherits VerticalBox {
                         text: " ";
                         height: parent.height - 20px;
                         width: parent.height - 20px;
-                        font-size: 20px;
+                        font-size: 30px;
                         vertical-alignment: center;
                         horizontal-alignment: center;
                         color: Theme.bg4;
+                        font-family: "JetbrainsMono Nerd Font";
                     }
 
                     TextInput {
-                        font-size: 20px;
+                        font-size: 30px;
                         vertical-alignment: center;
                         color: Theme.text;
                         text <=> query;
@@ -45,6 +47,8 @@ export component SearchView inherits VerticalBox {
             }
 
             ComboBox {
+                height: 60px;
+                width: 160px;
                 model: ["By Artist", "By Title"];
                 current <=> searchMode;
                 changed current => {
@@ -68,30 +72,115 @@ export component PlaylistView inherits VerticalBox {
     in-out property <bool> in-playlist;
     in-out property <Playlist> current-playlist;
     callback get-playlist(string);
-    padding: 10px;
-    // Text {
-    //     text: "Playlists";
-    //     color: Theme.text;
-    //     font-size: 30px;
-    // }
+    callback item-clicked(string);
+    padding: 5px;
 
-    if (!in-playlist): PlList {
-        items: playlists;
-        item-clicked(id) => {
-            get-playlist(id);
-            in-playlist = true;
+    Rectangle {
+        PlList {
+            states [
+                visible when !in-playlist: {
+                    opacity: 1;
+                    visible: true;
+                    in-out {
+                        animate opacity { duration: 100ms; }
+                    }
+                }
+                invisible when in-playlist: {
+                    opacity: 0;
+                    visible: false;
+                    in-out {
+                        animate opacity { duration: 100ms; }
+                    }
+                }
+            ]
+            items: playlists;
+            item-clicked(id) => {
+                get-playlist(id);
+                in-playlist = true;
+            }
         }
-    }
 
-    if (in-playlist): VerticalLayout {
-        Text {
-            text: current-playlist.title;
-            color: Theme.text;
-            font-size: 30px;
-        }
+        VerticalLayout {
+            states [
+                visible when in-playlist: {
+                    opacity: 1;
+                    visible: true;
+                    in-out {
+                        animate opacity { duration: 100ms; }
+                    }
+                }
+                invisible when !in-playlist: {
+                    opacity: 0;
+                    visible: false;
+                    in-out {
+                        animate opacity { duration: 100ms; }
+                    }
+                }
+            ]
+            spacing: 10px;
+            padding: 0px;
 
-        SongList {
-            items: current-playlist.songs;
+            HorizontalLayout {
+                padding: 0px;
+                height: 60px;
+                spacing: 5px;
+                Rectangle {
+                    height: parent.height;
+                    width: parent.height;
+                    background: touch.has-hover ? Theme.bg0 : Theme.bg1;
+                    animate background { duration: 200ms; }
+                    border-radius: 10px;
+                    Text {
+                        height: parent.height;
+                        width: parent.width;
+                        text: "";
+                        font-family: "JetbrainsMono Nerd Font Mono";
+                        font-size: 40px;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                        color: Theme.text;
+                    }
+
+                    touch := TouchArea {
+                        clicked => {
+                            in-playlist = false;
+                        }
+                    }
+                }
+
+                Rectangle {
+                    background: Theme.bg1;
+                    border-radius: 10px;
+                    HorizontalLayout {
+                        padding: 10px;
+                        padding-right: 20px;
+                        alignment: space-between;
+                        Text {
+                            text: current-playlist.title;
+                            color: Theme.text;
+                            font-size: 30px;
+                            vertical-alignment: center;
+                            horizontal-alignment: left;
+                        }
+
+                        Text {
+                            private property <string> len: current-playlist.songs.length;
+                            text: len + (len == 1 ? " song" : " songs");
+                            color: Theme.text2;
+                            font-size: 20px;
+                            vertical-alignment: center;
+                            horizontal-alignment: right;
+                        }
+                    }
+                }
+            }
+
+            SongList {
+                items: current-playlist.songs;
+                item-clicked(id) => {
+                    item-clicked(id);
+                }
+            }
         }
     }
 }
@@ -99,7 +188,7 @@ export component PlaylistView inherits VerticalBox {
 export component MainView inherits Rectangle {
     background: Theme.bg2;
     border-radius: 15px;
-    in property <string> active-view;
+    in property <Tabs> active-view;
     in property <[Song]> searchResults;
     in property <[PlaylistMinimal]> playlists;
     in property <Playlist> current-playlist;
@@ -110,7 +199,23 @@ export component MainView inherits Rectangle {
     callback get-playlist(string);
 
     SearchView {
-        visible: active-view == "Search";
+        states [
+            visible when active-view == Tabs.Search: {
+                opacity: 1;
+                visible: true;
+                in-out {
+                    animate opacity { duration: 100ms; }
+                }
+            }
+            invisible when active-view != Tabs.Search: {
+                opacity: 0;
+                visible: false;
+                in-out {
+                    animate opacity { duration: 100ms; }
+                }
+            }
+        ]
+
         searchResults: root.searchResults;
         submit(q, m) => {
             query-submit(q, m);
@@ -122,15 +227,29 @@ export component MainView inherits Rectangle {
     }
 
     plView := PlaylistView {
-        visible: active-view == "Playlists";
+        states [
+            visible when active-view == Tabs.Playlists: {
+                opacity: 1;
+                visible: true;
+                in-out {
+                    animate opacity { duration: 100ms; }
+                }
+            }
+            invisible when active-view != Tabs.Playlists: {
+                opacity: 0;
+                visible: false;
+                in-out {
+                    animate opacity { duration: 100ms; }
+                }
+            }
+        ]
         current-playlist: root.current-playlist;
         playlists: root.playlists;
         get-playlist(id) => {
-            get-playlist(id)
+            get-playlist(id);
         }
-    }
-
-    changed active-view => {
-        plView.in-playlist = false
+        item-clicked(id) => {
+            add(id);
+        }
     }
 }
