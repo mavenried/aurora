@@ -125,9 +125,7 @@ async fn unix_recver(
 
             Response::PlaylistResults(result) => {
                 tracing::info!("Received: PlaylistResults, len:{}", result.songs.len());
-                // if results.len() > 100 {
-                //     results = results[..100].to_vec();
-                // }
+
                 let mut state = state.lock().await;
                 state.playlist_result = Some(result);
                 state.update_playlist_results(app.clone()).await;
@@ -144,6 +142,7 @@ async fn unix_recver(
                 } else if state.queue_waitlist.contains(&id) {
                     state.update_queue(app.clone()).await;
                 } else if state.playlist_waitlist.contains(&id) {
+                    state.update_playlist_results(app.clone()).await;
                 }
             }
             Response::PlaylistList(plists) => {
@@ -164,7 +163,7 @@ pub async fn interface(app: slint::Weak<AuroraPlayer>) -> anyhow::Result<()> {
     while stream.is_none() {
         let path = PathBuf::from("/tmp/aurora-daemon.sock");
         if let Ok(s) = UnixStream::connect(path).await {
-            tracing::info!("Connected at 0.0.0.0:4321");
+            tracing::info!("Connected to the daemon.");
             stream = Some(s);
         } else {
             Command::new("aurora-daemon").spawn()?;
@@ -310,6 +309,8 @@ pub async fn interface(app: slint::Weak<AuroraPlayer>) -> anyhow::Result<()> {
                     .await;
             });
         });
+
+        aurora.invoke_refresh_playlists();
     });
 
     tokio::spawn(async move {
