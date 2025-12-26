@@ -18,3 +18,4 @@ Indev by [@mavenried](https://github.com/mavenried).
 - [ ] add ability to create and delete playlists
 - [ ] add ability to replace queue with playlists (ie. Load a playlist as a queue)
 - [ ] FIX THE UNGODLY AMOUNT OF RAM USAGE! (PRIORITY)
+- [ ] add batching support for commands like album art
