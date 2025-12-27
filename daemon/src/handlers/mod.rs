@@ -57,6 +57,7 @@ pub async fn handle_client(
     }
     loop {
         let request = read_request(&mut reader).await?;
+        tracing::debug!("{request:?}");
         if let Err(err) = match request {
             Request::Play(song_uuid) => enqueue::enqueue(&writer, &state, song_uuid).await,
             Request::PlaylistList => playlist::playlist_list(&writer).await,

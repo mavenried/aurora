@@ -73,6 +73,7 @@ export component PlaylistView inherits VerticalBox {
     in-out property <Playlist> current-playlist;
     callback get-playlist(string);
     callback item-clicked(string);
+    callback replace-queue(Playlist);
     padding: 5px;
 
     Rectangle {
@@ -149,11 +150,36 @@ export component PlaylistView inherits VerticalBox {
                 }
 
                 Rectangle {
+                    height: parent.height;
+                    width: parent.height;
+                    background: touch2.has-hover ? Theme.bg0 : Theme.bg1;
+                    animate background { duration: 200ms; }
+                    border-radius: 10px;
+                    Text {
+                        height: parent.height;
+                        width: parent.width;
+                        text: "";
+                        font-family: "JetbrainsMono Nerd Font Mono";
+                        font-size: 40px;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                        color: Theme.text;
+                    }
+
+                    touch2 := TouchArea {
+                        clicked => {
+                            replace-queue(root.current-playlist);
+                        }
+                    }
+                }
+
+                Rectangle {
                     background: Theme.bg1;
                     border-radius: 10px;
                     HorizontalLayout {
                         padding: 10px;
                         padding-right: 20px;
+                        padding-left: 20px;
                         alignment: space-between;
                         Text {
                             text: current-playlist.title;
@@ -197,6 +223,7 @@ export component MainView inherits Rectangle {
     callback add(string);
     callback get-all-playlists();
     callback get-playlist(string);
+    callback replace-queue(Playlist);
 
     SearchView {
         states [
@@ -250,6 +277,9 @@ export component MainView inherits Rectangle {
         }
         item-clicked(id) => {
             add(id);
+        }
+        replace-queue(pl) => {
+            replace-queue(pl);
         }
     }
 }

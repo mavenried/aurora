@@ -4,24 +4,25 @@ use crate::{
 };
 
 use aurora_protocol::{Response, Song};
+use uuid::Uuid;
 
 pub async fn replace_queue(
     stream: &WriteSocket,
     state: &State,
-    queue_in: Vec<Song>,
+    queue_in: Vec<Uuid>,
 ) -> anyhow::Result<()> {
     let mut state_locked = state.lock().await;
     let mut queue_out = vec![];
 
-    for song in queue_in {
-        let songmeta = match state_locked.index.get(&song.id) {
+    for id in queue_in {
+        let songmeta = match state_locked.index.get(&id) {
             Some(s) => s.clone(),
             None => {
                 send_to_client(
                     stream,
                     &Response::Error {
                         err_id: 1,
-                        err_msg: format!("No such song with id {}", song.id),
+                        err_msg: format!("No such song with id {}", id),
                     },
                 )
                 .await?;

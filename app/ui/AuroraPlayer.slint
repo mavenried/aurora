@@ -27,6 +27,7 @@ export component AuroraPlayer inherits Window {
     callback add(string);
     callback refresh-playlists();
     callback select-playlist(string);
+    callback replace-queue(Playlist);
 
     in-out property <string> Title: "Nothing Playing";
     in-out property <string> Artists: "No artist";
@@ -111,7 +112,12 @@ export component AuroraPlayer inherits Window {
                     add(s) => {
                         root.add(s);
                     }
-                    get-playlist(s) => select-playlist(s);
+                    get-playlist(s) => {
+                        select-playlist(s)
+                    }
+                    replace-queue(pl) => {
+                        root.replace-queue(pl)
+                    }
                 }
 
                 PlayerView {

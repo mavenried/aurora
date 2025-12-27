@@ -2,7 +2,7 @@ use std::{path::PathBuf, process::Command, sync::Arc, time::Duration, vec};
 
 use aurora_protocol::{Request, Response, SearchType};
 use base64::{Engine, prelude::BASE64_URL_SAFE};
-use slint::{Image, Rgba8Pixel, SharedPixelBuffer};
+use slint::{Image, Model, Rgba8Pixel, SharedPixelBuffer};
 
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
@@ -234,7 +234,8 @@ pub async fn interface(app: slint::Weak<AuroraPlayer>) -> anyhow::Result<()> {
             let state = state.clone();
             tokio::spawn(async move {
                 let state = state.lock().await;
-                let mut queue = state.queue.clone();
+                let mut queue: Vec<uuid::Uuid> =
+                    state.queue.clone().iter().map(|song| song.id).collect();
                 queue.remove(n as usize + 1);
                 let req = Request::ReplaceQueue(queue);
                 let _ = state.writer_tx.send(req).await;
@@ -307,6 +308,23 @@ pub async fn interface(app: slint::Weak<AuroraPlayer>) -> anyhow::Result<()> {
                     .writer_tx
                     .send(Request::Seek(Duration::from_millis(value as u64)))
                     .await;
+            });
+        });
+
+        let state = state_clone.clone();
+        aurora.on_replace_queue(move |pl| {
+            let state = state.clone();
+            let mut songs = vec![];
+            for song in pl.songs.iter() {
+                if let Ok(id) = uuid::Uuid::parse_str(song.id.as_str()) {
+                    songs.push(id);
+                }
+            }
+            tokio::spawn(async move {
+                let state = state.lock().await;
+                let _ = state.writer_tx.send(Request::Clear).await;
+                // let _ = state.writer_tx.send(Request::Play(songs[0])).await;
+                let _ = state.writer_tx.send(Request::ReplaceQueue(songs)).await;
             });
         });
 
