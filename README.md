@@ -13,9 +13,11 @@ Indev by [@mavenried](https://github.com/mavenried).
 - [x] rotate queue on next instead of changing index (ended up switching to a VecDeque)
 - [x] playlists page
 - [x] fix that weird stutter when adding songs.
+- [x] add ability to replace queue with playlists (ie. Load a playlist as a queue)
 - [ ] hot reloadable themes (json configs?)
 - [ ] add ability to add songs to playlists from the search menu
 - [ ] add ability to create and delete playlists
-- [ ] add ability to replace queue with playlists (ie. Load a playlist as a queue)
 - [ ] FIX THE UNGODLY AMOUNT OF RAM USAGE! (PRIORITY)
+  - [ ] eliminate the double caching. (both slint and the 'business logic' cache images)
+  - [ ] batching for album art calls?
 - [ ] add batching support for commands like album art
