@@ -14,9 +14,7 @@ Indev by [@mavenried](https://github.com/mavenried).
 - [x] playlists page
 - [x] fix that weird stutter when adding songs.
 - [x] add ability to replace queue with playlists (ie. Load a playlist as a queue)
-- [ ] hot reloadable themes (json configs?)
+- [x] hot reloadable themes (ended up using a toml config file watched by notify)
 - [ ] add ability to add songs to playlists from the search menu
 - [ ] add ability to create and delete playlists
-- [ ] FIX THE UNGODLY AMOUNT OF RAM USAGE! (PRIORITY)
-  - [ ] eliminate the double caching. (both slint and the 'business logic' cache images)
-- [ ] add batching support for commands like album art
+- [ ] switch to /tmp based album art caching and elimate ram supernova (on branch tmp-based-art)
