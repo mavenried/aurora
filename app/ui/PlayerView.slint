@@ -14,7 +14,7 @@ export global TimeUtils {
 
 export component PlayerView inherits Rectangle {
     height: 100px;
-    background: Theme.bg2;
+    background: Theme.bgd2;
     border-radius: 15px;
 
     in-out property <int> value;
@@ -37,7 +37,7 @@ export component PlayerView inherits Rectangle {
                 Text {
                     text: TimeUtils.ms_to_minsec(value);
                     font-size: 20px;
-                    color: Theme.text;
+                    color: Theme.txt1;
                 }
             }
 
@@ -51,7 +51,7 @@ export component PlayerView inherits Rectangle {
                         width: 40px;
                         height: 40px;
                         border-radius: 20px;
-                        background: prevTA.has-hover ? Theme.bg4 : Theme.bg3;
+                        background: prevTA.has-hover ? Theme.bgd4 : Theme.bgd3;
                         animate background { duration: 100ms; }
                         Text {
                             vertical-alignment: TextVerticalAlignment.center;
@@ -61,7 +61,7 @@ export component PlayerView inherits Rectangle {
 
                             text: "󰒮";
                             font-size: 30px;
-                            color: Theme.buttons;
+                            color: Theme.btns;
                         }
 
                         prevTA := TouchArea {
@@ -77,7 +77,7 @@ export component PlayerView inherits Rectangle {
                         width: 40px;
                         height: 40px;
                         border-radius: 20px;
-                        background: playTA.has-hover ? Theme.bg4 : Theme.bg3;
+                        background: playTA.has-hover ? Theme.bgd4 : Theme.bgd3;
                         animate background { duration: 100ms; }
                         Text {
                             vertical-alignment: TextVerticalAlignment.center;
@@ -87,7 +87,7 @@ export component PlayerView inherits Rectangle {
 
                             text: root.is-paused ? "" : "";
                             font-size: root.is-paused ? 25px : 30px;
-                            color: Theme.buttons;
+                            color: Theme.btns;
                         }
 
                         playTA := TouchArea {
@@ -103,7 +103,7 @@ export component PlayerView inherits Rectangle {
                         width: 40px;
                         height: 40px;
                         border-radius: 20px;
-                        background: nextTA.has-hover ? Theme.bg4 : Theme.bg3;
+                        background: nextTA.has-hover ? Theme.bgd4 : Theme.bgd3;
                         animate background { duration: 100ms; }
                         Text {
                             vertical-alignment: TextVerticalAlignment.center;
@@ -113,7 +113,7 @@ export component PlayerView inherits Rectangle {
 
                             text: "󰒭";
                             font-size: 30px;
-                            color: Theme.buttons;
+                            color: Theme.btns;
                         }
 
                         nextTA := TouchArea {
@@ -134,7 +134,7 @@ export component PlayerView inherits Rectangle {
                     text: TimeUtils.ms_to_minsec(duration);
                     font-size: 20px;
                     horizontal-alignment: TextHorizontalAlignment.right;
-                    color: Theme.text;
+                    color: Theme.txt1;
                 }
             }
         }

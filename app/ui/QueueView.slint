@@ -10,7 +10,7 @@ export component QueueView inherits Rectangle {
     callback queue-clear();
 
     width: 400px;
-    background: Theme.bg1;
+    background: Theme.bgd1;
     border-radius: 15px;
     clip: true;
 
@@ -22,12 +22,12 @@ export component QueueView inherits Rectangle {
             Rectangle {
                 width: 60px;
                 height: 30px;
-                background: Theme.bg1;
+                background: Theme.bgd1;
                 border-radius: 10px;
 
                 Text {
                     text: "Queue";
-                    color: Theme.text;
+                    color: Theme.txt1;
                     font-size: 15px;
                 }
             }
@@ -35,7 +35,7 @@ export component QueueView inherits Rectangle {
             Rectangle {
                 width: 60px;
                 height: 30px;
-                background: button.has-hover ? Theme.bg3 : Theme.bg1;
+                background: button.has-hover ? Theme.bgd3 : Theme.bgd1;
                 animate background { duration: 100ms; }
                 border-radius: 10px;
                 button := TouchArea {
@@ -46,7 +46,7 @@ export component QueueView inherits Rectangle {
 
                 Text {
                     text: "Clear";
-                    color: Theme.text;
+                    color: Theme.txt1;
                     font-size: 15px;
                 }
             }
@@ -55,7 +55,7 @@ export component QueueView inherits Rectangle {
         scroll := ScrollView {
             content-height: 100px * queue.length;
             transform-rotation: 180deg;
-            background: Theme.bg2;
+            background: Theme.bgd2;
 
             for item[i] in queue: NowPlayingView {
                 transform-rotation: 180deg;
@@ -63,7 +63,7 @@ export component QueueView inherits Rectangle {
                 AlbumArt: item.album_art;
                 Title: item.title;
                 border-radius: 0px;
-                background: touch.has-hover ? Theme.bg3 : Theme.bg2;
+                background: touch.has-hover ? Theme.bgd3 : Theme.bgd2;
                 animate background { duration: 200ms; }
                 touch := TouchArea {
                     width: parent.width;

@@ -3,37 +3,50 @@ use anyhow::anyhow;
 use aurora_protocol::Theme;
 use notify::{EventKind, RecursiveMode, Watcher};
 
-fn get_config() -> anyhow::Result<Theme> {
-    Ok(Theme {
-        bgd0: "#333333".into(),
-        bgd1: "#333333".into(),
-        bgd2: "#333333".into(),
-        bgd3: "#333333".into(),
-        bgd4: "#333333".into(),
-        txt1: "#333333".into(),
-        txt2: "#333333".into(),
-        acct: "#333333".into(),
-        srch: "#333333".into(),
-        btns: "#333333".into(),
-    })
+pub fn get_config() -> Theme {
+    let default = Theme {
+        bgd0: "#111111".into(),
+        bgd1: "#282828".into(),
+        bgd2: "#3c3836".into(),
+        bgd3: "#504945".into(),
+        bgd4: "#665c54".into(),
+        txt1: "#ebdbb2".into(),
+        txt2: "#bdae93".into(),
+        acct: "#d3869b".into(),
+        srch: "#3c3836".into(),
+        btns: "#ebdbb2".into(),
+    };
+    if let Some(mut path) = dirs::config_dir()
+        && path.join("aurora-player/config.toml").exists()
+    {
+        path = path.join("aurora-player/config.toml");
+        let s = std::fs::read_to_string(path).unwrap();
+        let parsed: Theme = toml::from_str(&s).unwrap_or(default);
+        println!("{parsed:?}");
+        parsed
+    } else {
+        default
+    }
 }
 
 pub async fn init(state: State) -> anyhow::Result<()> {
     let Some(mut path) = dirs::config_dir() else {
         return Err(anyhow!("could not load config dir"));
     };
-    path = path.join("aurora-player/config.toml");
+    path = path.join("aurora-player");
     let (tx, rx) = std::sync::mpsc::channel();
-
     let mut watcher = notify::recommended_watcher(tx)?;
-    watcher.watch(&path, RecursiveMode::NonRecursive)?;
-
+    watcher.watch(&path, RecursiveMode::Recursive)?;
     for event in rx {
         if let Ok(event) = event {
-            if matches!(event.kind, EventKind::Modify(_)) {
-                if let Ok(theme) = get_config() {
-                    send_to_all(&state, &aurora_protocol::Response::Theme(theme)).await;
+            match event.kind {
+                EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_) => {
+                    let theme = get_config();
+                    state.lock().await.theme = theme.clone();
+                    send_to_all(&state, &aurora_protocol::Response::Theme(theme)).await?;
+                    tracing::info!("Theme Updated!");
                 }
+                _ => (),
             }
         }
     }

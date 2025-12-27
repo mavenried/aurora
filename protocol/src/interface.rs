@@ -27,4 +27,5 @@ pub enum Response {
     PlaylistResults(Playlist),
     PlaylistList(Vec<PlaylistMinimal>),
     Queue(Vec<Song>),
+    Theme(Theme),
 }

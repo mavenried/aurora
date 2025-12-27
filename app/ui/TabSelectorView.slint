@@ -5,14 +5,14 @@ export component TabButton inherits Rectangle {
     in property <Tabs> tab;
     callback button-clicked();
     Rectangle {
-        background: active == tab ? Theme.bg1 : Theme.bg2;
+        background: active == tab ? Theme.bgd1 : Theme.bgd2;
 
         animate background { duration: 200ms; }
         animate border-color { duration: 200ms; }
         border-radius: 10px;
         Text {
             text: label;
-            color: active == tab ? Theme.accent : Theme.text;
+            color: active == tab ? Theme.acct : Theme.txt1;
             animate color { duration: 200ms; }
             font-size: 25px;
             vertical-alignment: center;
@@ -36,7 +36,7 @@ export component TabSelectorView inherits Rectangle {
     height: 60px;
 
     Rectangle {
-        background: Theme.bg2;
+        background: Theme.bgd2;
         border-radius: 15px;
 
         HorizontalLayout {

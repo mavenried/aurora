@@ -2,7 +2,7 @@ use std::{path::PathBuf, process::Command, sync::Arc, time::Duration, vec};
 
 use aurora_protocol::{Request, Response, SearchType};
 use base64::{Engine, prelude::BASE64_URL_SAFE};
-use slint::{Image, Model, Rgba8Pixel, SharedPixelBuffer};
+use slint::{ComponentHandle, Image, Model, Rgba8Pixel, SharedPixelBuffer};
 
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
@@ -17,6 +17,16 @@ use crate::{
     AuroraPlayer, DEFAULT_ART,
     types::{ImageCache, ImageFor, State, StateStruct},
 };
+
+fn hex_to_u8(hex: String) -> slint::Color {
+    let hex = hex.trim_start_matches('#');
+
+    let r = u8::from_str_radix(&hex[0..2], 16).expect("invalid red");
+    let g = u8::from_str_radix(&hex[2..4], 16).expect("invalid green");
+    let b = u8::from_str_radix(&hex[4..6], 16).expect("invalid blue");
+
+    slint::Color::from_rgb_u8(r, g, b)
+}
 
 pub fn album_art_from_data(data: &[u8]) -> anyhow::Result<SharedPixelBuffer<Rgba8Pixel>> {
     let img = image::load_from_memory(data)?;
@@ -151,6 +161,40 @@ async fn unix_recver(
                 state.playlist_list_results = plists;
                 state.update_search_results(app.clone()).await;
                 state.update_playlists(app.clone()).await;
+            }
+            Response::Theme(theme) => {
+                let _ = app.upgrade_in_event_loop(|aurora| {
+                    aurora
+                        .global::<crate::Theme>()
+                        .set_acct(hex_to_u8(theme.acct));
+                    aurora
+                        .global::<crate::Theme>()
+                        .set_btns(hex_to_u8(theme.btns));
+                    aurora
+                        .global::<crate::Theme>()
+                        .set_srch(hex_to_u8(theme.srch));
+                    aurora
+                        .global::<crate::Theme>()
+                        .set_txt1(hex_to_u8(theme.txt1));
+                    aurora
+                        .global::<crate::Theme>()
+                        .set_txt2(hex_to_u8(theme.txt2));
+                    aurora
+                        .global::<crate::Theme>()
+                        .set_bgd0(hex_to_u8(theme.bgd0));
+                    aurora
+                        .global::<crate::Theme>()
+                        .set_bgd1(hex_to_u8(theme.bgd1));
+                    aurora
+                        .global::<crate::Theme>()
+                        .set_bgd2(hex_to_u8(theme.bgd2));
+                    aurora
+                        .global::<crate::Theme>()
+                        .set_bgd3(hex_to_u8(theme.bgd3));
+                    aurora
+                        .global::<crate::Theme>()
+                        .set_bgd4(hex_to_u8(theme.bgd4));
+                });
             }
             other => tracing::info!("{other:?}"),
         }

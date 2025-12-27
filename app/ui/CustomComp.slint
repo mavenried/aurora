@@ -66,7 +66,7 @@ export component CustomSlider inherits Rectangle {
     track := Rectangle {
         y: (parent.height - self.height) / 2;
         height: touch.has-hover ? 12px : 6px;
-        background: Theme.bg3;
+        background: Theme.bgd3;
         border-radius: touch.has-hover ? 6px : 3px;
 
         animate height, border-radius { duration: 100ms; }
@@ -79,7 +79,7 @@ export component CustomSlider inherits Rectangle {
 
             Rectangle {
                 width: track.width * root.normalizedDisplayHoverValue;
-                background: Theme.bg4;
+                background: Theme.bgd4;
                 border-radius: track.border-radius;
             }
         }
@@ -91,7 +91,7 @@ export component CustomSlider inherits Rectangle {
 
             Rectangle {
                 width: track.width * root.normalizedDisplayValue;
-                background: Theme.accent;
+                background: Theme.acct;
                 border-radius: track.border-radius;
             }
         }
@@ -164,7 +164,7 @@ export component ComboBox {
     Rectangle {
         width: parent.width;
         height: parent.height;
-        background: Theme.bg2;
+        background: Theme.bgd2;
         border-radius: 10px;
         TouchArea {
             width: parent.width;
@@ -185,22 +185,22 @@ export component ComboBox {
                 text: root.current;
                 vertical-alignment: center;
                 font-size: 20px;
-                color: Theme.text;
+                color: Theme.txt1;
             }
 
             Text {
                 text: root.expanded ? "▲" : "▼";
                 horizontal-alignment: right;
                 vertical-alignment: center;
-                color: Theme.text;
+                color: Theme.txt1;
             }
         }
     }
 
     box := Rectangle {
-        background: Theme.bg2;
+        background: Theme.bgd2;
         border-width: 2px;
-        border-color: Theme.accent;
+        border-color: Theme.acct;
         y: parent.height + 5px;
         height: 0px;
         border-radius: 10px;
@@ -209,7 +209,7 @@ export component ComboBox {
             duration: 100ms;
             easing: ease-in-out-quad;
         }
-        drop-shadow-color: Theme.bg0;
+        drop-shadow-color: Theme.bgd0;
         drop-shadow-blur: 10px;
         TouchArea { }
 
@@ -222,7 +222,7 @@ export component ComboBox {
                 border-radius: 10px;
                 height: 50px;
 
-                background: item == root.current ? Theme.bg3 : Theme.bg2;
+                background: item == root.current ? Theme.bgd3 : Theme.bgd2;
                 TouchArea {
                     width: parent.width;
                     height: parent.height;
@@ -239,7 +239,7 @@ export component ComboBox {
                         text: item;
                         vertical-alignment: center;
                         font-size: 15px;
-                        color: Theme.text;
+                        color: Theme.txt1;
                     }
                 }
             }
@@ -262,7 +262,7 @@ export component PlList inherits VerticalLayout {
                 for item[i] in items: Rectangle {
                     height: 70px;
                     border-radius: 10px;
-                    background: touch.has-hover ? Theme.bg3 : Theme.bg2;
+                    background: touch.has-hover ? Theme.bgd3 : Theme.bgd2;
                     animate background { duration: 100ms; }
                     touch := TouchArea {
                         clicked => {
@@ -278,7 +278,7 @@ export component PlList inherits VerticalLayout {
                             HorizontalLayout {
                                 Text {
                                     text: item.title;
-                                    color: Theme.text;
+                                    color: Theme.txt1;
                                     font-size: 30px;
                                     horizontal-alignment: left;
                                     vertical-alignment: center;
@@ -286,7 +286,7 @@ export component PlList inherits VerticalLayout {
 
                                 Text {
                                     text: item.length + (item.length == 1 ? "  song." : " songs.");
-                                    color: Theme.text2;
+                                    color: Theme.txt2;
                                     font-size: 20px;
                                     horizontal-alignment: right;
                                     vertical-alignment: center;
@@ -314,7 +314,7 @@ export component SongList inherits VerticalLayout {
                 padding: 0px;
                 for item[i] in items: Rectangle {
                     border-radius: 10px;
-                    background: touch.has-hover ? Theme.bg3 : Theme.bg2;
+                    background: touch.has-hover ? Theme.bgd3 : Theme.bgd2;
                     animate background { duration: 100ms; }
                     touch := TouchArea {
                         clicked => {
@@ -340,7 +340,7 @@ export component SongList inherits VerticalLayout {
 
                         Text {
                             text: item.title;
-                            color: Theme.text;
+                            color: Theme.txt1;
                             font-size: 20px;
                             vertical-alignment: center;
                             horizontal-alignment: left;
@@ -348,7 +348,7 @@ export component SongList inherits VerticalLayout {
 
                         Text {
                             text: item.artists;
-                            color: Theme.text2;
+                            color: Theme.txt2;
                             font-size: 15px;
                             vertical-alignment: center;
                             horizontal-alignment: right;

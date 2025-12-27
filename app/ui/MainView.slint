@@ -18,7 +18,7 @@ export component SearchView inherits VerticalBox {
             Rectangle {
                 border-radius: 10px;
                 height: 60px;
-                background: Theme.bg1;
+                background: Theme.bgd1;
                 border-width: 1px;
                 HorizontalBox {
                     padding: 10px;
@@ -30,14 +30,14 @@ export component SearchView inherits VerticalBox {
                         font-size: 30px;
                         vertical-alignment: center;
                         horizontal-alignment: center;
-                        color: Theme.bg4;
+                        color: Theme.bgd4;
                         font-family: "JetbrainsMono Nerd Font";
                     }
 
                     TextInput {
                         font-size: 30px;
                         vertical-alignment: center;
-                        color: Theme.text;
+                        color: Theme.txt1;
                         text <=> query;
                         accepted => {
                             submit(query, searchMode);
@@ -128,7 +128,7 @@ export component PlaylistView inherits VerticalBox {
                 Rectangle {
                     height: parent.height;
                     width: parent.height;
-                    background: touch.has-hover ? Theme.bg0 : Theme.bg1;
+                    background: touch.has-hover ? Theme.bgd0 : Theme.bgd1;
                     animate background { duration: 200ms; }
                     border-radius: 10px;
                     Text {
@@ -139,7 +139,7 @@ export component PlaylistView inherits VerticalBox {
                         font-size: 40px;
                         horizontal-alignment: center;
                         vertical-alignment: center;
-                        color: Theme.text;
+                        color: Theme.txt1;
                     }
 
                     touch := TouchArea {
@@ -152,7 +152,7 @@ export component PlaylistView inherits VerticalBox {
                 Rectangle {
                     height: parent.height;
                     width: parent.height;
-                    background: touch2.has-hover ? Theme.bg0 : Theme.bg1;
+                    background: touch2.has-hover ? Theme.bgd0 : Theme.bgd1;
                     animate background { duration: 200ms; }
                     border-radius: 10px;
                     Text {
@@ -163,7 +163,7 @@ export component PlaylistView inherits VerticalBox {
                         font-size: 40px;
                         horizontal-alignment: center;
                         vertical-alignment: center;
-                        color: Theme.text;
+                        color: Theme.txt1;
                     }
 
                     touch2 := TouchArea {
@@ -174,7 +174,7 @@ export component PlaylistView inherits VerticalBox {
                 }
 
                 Rectangle {
-                    background: Theme.bg1;
+                    background: Theme.bgd1;
                     border-radius: 10px;
                     HorizontalLayout {
                         padding: 10px;
@@ -183,7 +183,7 @@ export component PlaylistView inherits VerticalBox {
                         alignment: space-between;
                         Text {
                             text: current-playlist.title;
-                            color: Theme.text;
+                            color: Theme.txt1;
                             font-size: 30px;
                             vertical-alignment: center;
                             horizontal-alignment: left;
@@ -192,7 +192,7 @@ export component PlaylistView inherits VerticalBox {
                         Text {
                             private property <string> len: current-playlist.songs.length;
                             text: len + (len == 1 ? " song" : " songs");
-                            color: Theme.text2;
+                            color: Theme.txt2;
                             font-size: 20px;
                             vertical-alignment: center;
                             horizontal-alignment: right;
@@ -212,7 +212,7 @@ export component PlaylistView inherits VerticalBox {
 }
 
 export component MainView inherits Rectangle {
-    background: Theme.bg2;
+    background: Theme.bgd2;
     border-radius: 15px;
     in property <Tabs> active-view;
     in property <[Song]> searchResults;

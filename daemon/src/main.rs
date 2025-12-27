@@ -15,6 +15,7 @@ mod helpers;
 mod types;
 
 mod mpris_thread;
+mod theme_thread;
 mod watcher_thread;
 
 use types::*;
@@ -76,12 +77,17 @@ async fn async_main() -> std::io::Result<()> {
         index,
         sink: Arc::new(sink),
         audio: None,
+        theme: theme_thread::get_config(),
     }));
 
     let state_clone = state.clone();
     tokio::spawn(async move { watcher_thread::init(state_clone).await });
+
     let state_clone = state.clone();
     tokio::spawn(async move { mpris_thread::init(state_clone).await });
+
+    let state_clone = state.clone();
+    tokio::spawn(async move { theme_thread::init(state_clone).await });
 
     let path = PathBuf::from(SOCKFILE);
     let listener = UnixListener::bind(path).unwrap_or_else(|err| {

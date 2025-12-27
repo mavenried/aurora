@@ -1,5 +1,5 @@
 use crate::types::{GetReturn, SongIndex, WriteSocket};
-use aurora_protocol::{Song, SongMeta, Status};
+use aurora_protocol::{Song, SongMeta, Status, Theme};
 use rodio::Sink;
 use std::collections::VecDeque;
 use std::sync::Arc;
@@ -12,6 +12,7 @@ pub struct StateStruct {
     pub sink: Arc<Sink>,
     pub clients: Vec<WriteSocket>,
     pub audio: Option<source::SeekableAudio>,
+    pub theme: Theme,
 }
 
 mod playback;

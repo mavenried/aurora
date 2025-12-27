@@ -3,7 +3,7 @@ export component NowPlayingView inherits Rectangle {
     in property <string> Title;
     in property <string> Artists;
     in property <image> AlbumArt;
-    background: Theme.bg2;
+    background: Theme.bgd2;
     border-radius: 15px;
 
     HorizontalLayout {
@@ -40,7 +40,7 @@ export component NowPlayingView inherits Rectangle {
                         text: Title;
                         y: 0;
                         x: should-scroll ? scroll-offset * 1px : 0;
-                        color: Theme.text;
+                        color: Theme.txt1;
                     }
 
                     Text {
@@ -49,7 +49,7 @@ export component NowPlayingView inherits Rectangle {
                         y: 0;
                         x: should-scroll ? scroll-offset * 1px + song.preferred-width + 50px : 1000px;
                         visible: should-scroll;
-                        color: Theme.text;
+                        color: Theme.txt1;
                     }
 
                     timer := Timer {
@@ -80,7 +80,7 @@ export component NowPlayingView inherits Rectangle {
                         text: Artists;
                         y: 0;
                         x: should-scroll ? scroll-offset * 1px : 0;
-                        color: Theme.text2;
+                        color: Theme.txt2;
                     }
 
                     Text {
@@ -89,7 +89,7 @@ export component NowPlayingView inherits Rectangle {
                         y: 0;
                         x: should-scroll ? scroll-offset * 1px + artist.preferred-width + 30px : 1000px;
                         visible: should-scroll;
-                        color: Theme.text2;
+                        color: Theme.txt2;
                     }
 
                     timer2 := Timer {
