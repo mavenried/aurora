@@ -19,5 +19,4 @@ Indev by [@mavenried](https://github.com/mavenried).
 - [ ] add ability to create and delete playlists
 - [ ] FIX THE UNGODLY AMOUNT OF RAM USAGE! (PRIORITY)
   - [ ] eliminate the double caching. (both slint and the 'business logic' cache images)
-  - [ ] batching for album art calls?
 - [ ] add batching support for commands like album art
