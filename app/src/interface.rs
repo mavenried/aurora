@@ -1,7 +1,6 @@
 use std::{path::PathBuf, process::Command, sync::Arc, time::Duration, vec};
 
 use aurora_protocol::{Request, Response, SearchType};
-use base64::{Engine, prelude::BASE64_URL_SAFE};
 use slint::{ComponentHandle, Image, Model, Rgba8Pixel, SharedPixelBuffer};
 
 use tokio::{
@@ -15,7 +14,7 @@ use tokio::{
 
 use crate::{
     AuroraPlayer, DEFAULT_ART,
-    types::{ImageCache, ImageFor, State, StateStruct},
+    types::{State, StateStruct},
 };
 
 fn hex_to_u8(hex: String) -> slint::Color {
@@ -72,17 +71,10 @@ async fn unix_recver(
 
         match res {
             Response::Status(status) => {
-                let mut state_locked = state.lock().await;
-                let buffer = if let Some(s) = &status.current_song {
-                    state_locked.get_album_art(ImageFor::Queue(s.id)).await
-                } else {
-                    state_locked.default_art_buffer.clone()
-                };
-
-                drop(state_locked);
+                let state_locked = state.lock().await;
+                let default_art = state_locked.default_art_buffer.clone();
 
                 let _ = app.upgrade_in_event_loop(move |aurora| {
-                    let album_art = Image::from_rgba8(buffer);
                     aurora.set_Title(
                         status
                             .current_song
@@ -109,7 +101,20 @@ async fn unix_recver(
                             .unwrap_or(0),
                     );
 
-                    aurora.set_AlbumArt(album_art);
+                    aurora.set_AlbumArt({
+                        if status
+                            .current_song
+                            .as_ref()
+                            .is_some_and(|s| s.art_path.is_some())
+                        {
+                            Image::load_from_path(
+                                status.current_song.unwrap().art_path.unwrap().as_path(),
+                            )
+                            .unwrap()
+                        } else {
+                            Image::from_rgba8(default_art)
+                        }
+                    });
 
                     aurora.set_is_paused(status.is_paused);
 
@@ -139,21 +144,6 @@ async fn unix_recver(
                 let mut state = state.lock().await;
                 state.playlist_result = Some(result);
                 state.update_playlist_results(app.clone()).await;
-            }
-            Response::Picture { id, data } => {
-                tracing::info!("Received: Picture");
-                let decoded = BASE64_URL_SAFE.decode(data).unwrap();
-                let buf = album_art_from_data(decoded.as_slice()).unwrap();
-
-                let mut state = state.lock().await;
-                state.artcache.put(id, buf);
-                if state.search_waitlist.contains(&id) {
-                    state.update_search_results(app.clone()).await;
-                } else if state.queue_waitlist.contains(&id) {
-                    state.update_queue(app.clone()).await;
-                } else if state.playlist_waitlist.contains(&id) {
-                    state.update_playlist_results(app.clone()).await;
-                }
             }
             Response::PlaylistList(plists) => {
                 tracing::info!("{plists:?}");
@@ -219,15 +209,11 @@ pub async fn interface(app: slint::Weak<AuroraPlayer>) -> anyhow::Result<()> {
     let (tx, rx) = tokio::sync::mpsc::channel::<Request>(10);
     let state = Arc::new(Mutex::new(StateStruct {
         default_art_buffer: album_art_from_data(DEFAULT_ART).unwrap(),
-        artcache: ImageCache::new(),
         writer_tx: tx,
         queue: vec![],
-        search_results: vec![],
-        queue_waitlist: vec![],
-        search_waitlist: vec![],
-        playlist_waitlist: vec![],
-        playlist_list_results: vec![],
         playlist_result: None,
+        playlist_list_results: vec![],
+        search_results: vec![],
     }));
 
     let state_clone = state.clone();

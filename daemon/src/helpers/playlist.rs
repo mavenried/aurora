@@ -1,27 +1,40 @@
 use std::process::exit;
 
-use aurora_protocol::{Playlist, PlaylistIn, PlaylistMinimal};
+use aurora_protocol::{Playlist, PlaylistIn, PlaylistMinimal, Song};
 use std::io::Result;
 use tokio::fs;
 use uuid::Uuid;
 
-pub async fn get_playlist(id: Uuid) -> Result<Playlist> {
-    let playlists_dir = dirs::config_dir()
-        .unwrap_or_else(|| {
-            tracing::error!("No config dir.");
-            exit(1)
-        })
-        .join("aurora-player")
-        .join("playlists");
+use crate::types::StateStruct;
 
-    tokio::fs::create_dir_all(&playlists_dir).await?;
+impl StateStruct {
+    pub async fn get_playlist(&mut self, id: Uuid) -> Result<Playlist> {
+        let playlists_dir = dirs::config_dir()
+            .unwrap_or_else(|| {
+                tracing::error!("No config dir.");
+                exit(1)
+            })
+            .join("aurora-player")
+            .join("playlists");
 
-    let file_path = playlists_dir.join(format!("{}.json", id));
-    let data = fs::read_to_string(file_path).await?;
-    let playlist: Playlist = serde_json::from_str(&data)?;
-    Ok(playlist)
+        tokio::fs::create_dir_all(&playlists_dir).await?;
+
+        let file_path = playlists_dir.join(format!("{}.json", id));
+        let data = fs::read_to_string(file_path).await?;
+        let mut playlist: Playlist = serde_json::from_str(&data)?;
+        let mut out = vec![];
+        for song in playlist.songs {
+            self.get_art(song.id);
+            if self.index.contains_key(&song.id) {
+                out.push(Song::from(self.index.get(&song.id).unwrap()));
+            } else {
+                tracing::warn!("Index does not have {}", song.title);
+            }
+        }
+        playlist.songs = out;
+        Ok(playlist)
+    }
 }
-
 pub async fn get_all_playlists() -> Result<Vec<PlaylistMinimal>> {
     let playlists_dir = dirs::config_dir()
         .unwrap_or_else(|| {

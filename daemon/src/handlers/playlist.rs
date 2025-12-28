@@ -1,7 +1,7 @@
 use uuid::Uuid;
 
 use crate::{
-    helpers::{create_playlist, get_all_playlists, get_playlist, send_to_client},
+    helpers::{create_playlist, get_all_playlists, send_to_client},
     types::*,
 };
 use aurora_protocol::{PlaylistIn, Response};
@@ -45,9 +45,13 @@ pub async fn playlist_list(stream: &WriteSocket) -> anyhow::Result<()> {
     Ok(())
 }
 
-pub async fn playlist_get(stream: &WriteSocket, id: Uuid) -> anyhow::Result<()> {
-    match get_playlist(id).await {
+pub async fn playlist_get(stream: &WriteSocket, state: &State, id: Uuid) -> anyhow::Result<()> {
+    let mut state = state.lock().await;
+    match state.get_playlist(id).await {
         Ok(playlist) => {
+            for song in &playlist.songs {
+                state.get_art(song.id);
+            }
             send_to_client(stream, &Response::PlaylistResults(playlist)).await?;
         }
         Err(err) => {

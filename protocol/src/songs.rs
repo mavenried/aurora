@@ -9,6 +9,7 @@ pub struct SongMeta {
     pub artists: Vec<String>,
     pub duration: Duration,
     pub path: PathBuf,
+    pub art_path: Option<PathBuf>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -17,6 +18,7 @@ pub struct Song {
     pub title: String,
     pub artists: Vec<String>,
     pub duration: Duration,
+    pub art_path: Option<PathBuf>,
 }
 
 impl From<&SongMeta> for Song {
@@ -26,6 +28,7 @@ impl From<&SongMeta> for Song {
             title: value.title.clone(),
             artists: value.artists.clone(),
             duration: value.duration,
+            art_path: value.art_path.clone(),
         }
     }
 }

@@ -9,7 +9,6 @@ use crate::{
     types::{State, WriteSocket},
 };
 
-mod albumart;
 mod clear;
 mod enqueue;
 pub mod next_prev;
@@ -63,11 +62,10 @@ pub async fn handle_client(
         if let Err(err) = match request {
             Request::Play(song_uuid) => enqueue::enqueue(&writer, &state, song_uuid).await,
             Request::PlaylistList => playlist::playlist_list(&writer).await,
-            Request::PlaylistGet(pl_uuid) => playlist::playlist_get(&writer, pl_uuid).await,
+            Request::PlaylistGet(pl_uuid) => playlist::playlist_get(&writer, &state, pl_uuid).await,
             Request::Search(st) => search::search(&writer, &state, st).await,
             Request::Clear => clear::clear(&state).await,
             Request::PlaylistCreate(pl_in) => playlist::playlist_create(&writer, pl_in).await,
-            Request::AlbumArt(song_uuid) => albumart::albumart(&writer, &state, song_uuid).await,
             Request::Next(n) => next_prev::next(&writer, &state, n).await,
             Request::Prev(n) => next_prev::prev(&writer, &state, n).await,
             Request::Pause => pause::pause(&writer, &state).await,
@@ -75,6 +73,7 @@ pub async fn handle_client(
             Request::ReplaceQueue(queue) => {
                 replace_queue::replace_queue(&writer, &state, queue).await
             }
+            Request::PlaylistDelete(id) => Ok(()),
         } {
             tracing::error!("Err: {err}");
         }
