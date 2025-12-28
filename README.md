@@ -17,4 +17,4 @@ Indev by [@mavenried](https://github.com/mavenried).
 - [x] hot reloadable themes (ended up using a toml config file watched by notify)
 - [ ] add ability to add songs to playlists from the search menu
 - [ ] add ability to create and delete playlists
-- [ ] switch to /tmp based album art caching and elimate ram supernova (on branch tmp-based-art)
+- [ ] figure out a better way to cache images that is not as ram hungry. Scale down?
