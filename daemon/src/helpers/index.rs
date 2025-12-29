@@ -12,7 +12,7 @@ use walkdir::WalkDir;
 
 use crate::types::SongIndex;
 
-pub async fn generate_index(music_dir: &PathBuf) -> std::io::Result<()> {
+pub async fn generate_index(music_dir: &PathBuf) -> std::io::Result<SongIndex> {
     // collect supported audio files
     let mut songs: Vec<PathBuf> = Vec::new();
     for entry in WalkDir::new(music_dir)
@@ -108,6 +108,7 @@ pub async fn generate_index(music_dir: &PathBuf) -> std::io::Result<()> {
             artists,
             duration,
             path,
+            art_path: None,
         };
 
         index.insert(id, songmeta);
@@ -115,7 +116,7 @@ pub async fn generate_index(music_dir: &PathBuf) -> std::io::Result<()> {
 
     tracing::info!("Indexed {} songs.", index.len());
     save_index(&index).await?;
-    Ok(())
+    Ok(index)
 }
 
 pub async fn load_index() -> std::io::Result<SongIndex> {
