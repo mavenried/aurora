@@ -9,7 +9,7 @@ pub async fn init(state: State) {
         sleep(Duration::from_millis(100)).await;
         let mut state_locked = state.lock().await;
         if state_locked.sink.empty() && !state_locked.queue.is_empty() {
-            state_locked.next(0).await;
+            state_locked.next(1).await;
             state_locked.add().await;
 
             let queue = state_locked.queue.clone().iter().map(Song::from).collect();

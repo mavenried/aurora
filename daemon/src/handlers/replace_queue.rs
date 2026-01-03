@@ -33,10 +33,8 @@ pub async fn replace_queue(
     }
 
     state_locked.queue = queue_out.into();
-
-    if state_locked.current_song.is_none() {
-        state_locked.add().await;
-    }
+    state_locked.current_song = Some(state_locked.queue[0].clone());
+    state_locked.add().await;
 
     let resp = Response::Queue(state_locked.queue.iter().map(Song::from).collect());
     drop(state_locked);
