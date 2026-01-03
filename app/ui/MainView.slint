@@ -30,17 +30,20 @@ export component SearchView inherits VerticalBox {
                         font-size: 30px;
                         vertical-alignment: center;
                         horizontal-alignment: center;
-                        color: Theme.bgd4;
+                        color: Theme.srch;
                         font-family: "JetbrainsMono Nerd Font";
                     }
 
-                    TextInput {
-                        font-size: 30px;
-                        vertical-alignment: center;
-                        color: Theme.txt1;
-                        text <=> query;
-                        accepted => {
-                            submit(query, searchMode);
+                    Rectangle {
+                        clip: true;
+                        TextInput {
+                            font-size: 30px;
+                            vertical-alignment: center;
+                            color: Theme.txt1;
+                            text <=> query;
+                            accepted => {
+                                submit(query, searchMode);
+                            }
                         }
                     }
                 }

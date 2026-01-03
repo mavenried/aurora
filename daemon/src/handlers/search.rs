@@ -1,5 +1,5 @@
 use crate::{helpers::send_to_client, types::*};
-use aurora_protocol::{Response, SearchType, Song, SongMeta};
+use aurora_protocol::{Response, SearchType, Song};
 
 pub async fn search(
     stream: &WriteSocket,

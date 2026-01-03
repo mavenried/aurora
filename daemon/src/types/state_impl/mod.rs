@@ -1,6 +1,5 @@
 use crate::types::{GetReturn, SongIndex, WriteSocket};
 use aurora_protocol::{Song, SongMeta, Status, Theme};
-use image::{DynamicImage, ImageError};
 use image::{ImageReader, imageops::FilterType};
 use lofty::file::TaggedFileExt;
 use lofty::read_from_path;
