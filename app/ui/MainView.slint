@@ -41,7 +41,7 @@ export component SearchView inherits VerticalBox {
                             vertical-alignment: center;
                             color: Theme.txt1;
                             text <=> query;
-                            accepted => {
+                            changed text => {
                                 submit(query, searchMode);
                             }
                         }
