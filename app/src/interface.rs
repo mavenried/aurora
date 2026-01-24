@@ -273,11 +273,11 @@ pub async fn interface(app: slint::Weak<AuroraPlayer>) -> anyhow::Result<()> {
         let state = state_clone.clone();
         aurora.on_search(move |q, m| {
             let state = state.clone();
-            if !q.is_empty() {
+            if !q.trim().is_empty() {
                 let query = if m == "By Artist" {
-                    Request::Search(SearchType::ByArtist(q.to_string()))
+                    Request::Search(SearchType::ByArtist(q.trim().to_string()))
                 } else {
-                    Request::Search(SearchType::ByTitle(q.to_string()))
+                    Request::Search(SearchType::ByTitle(q.trim().to_string()))
                 };
                 tokio::spawn(async move {
                     let _ = state.lock().await.writer_tx.send(query).await;
