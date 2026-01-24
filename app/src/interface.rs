@@ -11,6 +11,7 @@ use tokio::{
     },
     sync::{Mutex, mpsc::Receiver},
 };
+use uuid::Uuid;
 
 use crate::{
     AuroraPlayer, DEFAULT_ART,
@@ -130,9 +131,9 @@ async fn unix_recver(
             }
             Response::SearchResults(mut results) => {
                 tracing::info!("Received: SearchResults, len:{}", results.len());
-                if results.len() > 100 {
-                    results = results[..100].to_vec();
-                }
+                // if results.len() > 100 {
+                //     results = results[..100].to_vec();
+                // }
                 let mut state = state.lock().await;
                 state.search_results = results;
                 state.update_search_results(app.clone()).await;
@@ -263,12 +264,9 @@ pub async fn interface(app: slint::Weak<AuroraPlayer>) -> anyhow::Result<()> {
         aurora.on_queue_remove(move |n| {
             let state = state.clone();
             tokio::spawn(async move {
-                let state = state.lock().await;
-                let mut queue: Vec<uuid::Uuid> =
-                    state.queue.clone().iter().map(|song| song.id).collect();
-                queue.remove(n as usize + 1);
-                let req = Request::ReplaceQueue(queue);
-                let _ = state.writer_tx.send(req).await;
+                let id = Uuid::parse_str(n.as_str()).unwrap();
+                let req = Request::RemoveSong(id);
+                let _ = state.lock().await.writer_tx.send(req).await;
             });
         });
 

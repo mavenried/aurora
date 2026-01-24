@@ -16,6 +16,7 @@ pub enum Request {
     Seek(Duration),
     Search(SearchType),
     ReplaceQueue(Vec<Uuid>),
+    RemoveSong(Uuid),
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

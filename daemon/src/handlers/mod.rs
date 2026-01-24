@@ -14,6 +14,7 @@ mod enqueue;
 pub mod next_prev;
 mod pause;
 mod playlist;
+mod remove_song;
 mod replace_queue;
 mod search;
 mod seek;
@@ -73,6 +74,7 @@ pub async fn handle_client(
             Request::ReplaceQueue(queue) => {
                 replace_queue::replace_queue(&writer, &state, queue).await
             }
+            Request::RemoveSong(id) => remove_song::remove_song(&state, id).await,
             Request::PlaylistDelete(id) => Ok(()),
         } {
             tracing::error!("Err: {err}");
