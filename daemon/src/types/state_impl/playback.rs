@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use super::{GetReturn, StateStruct};
 
 impl StateStruct {
@@ -5,13 +7,22 @@ impl StateStruct {
         if self.queue.is_empty() {
             return GetReturn::QueueEmpty;
         }
-        for _ in 0..n {
-            let song = self.queue.pop_back().unwrap();
-            self.queue.push_front(song);
-        }
 
+        if n <= 1 {
+            if let Some(audio) = &self.audio
+                && audio.get_position() < Duration::from_secs(1)
+            {
+                let song = self.queue.pop_back().unwrap();
+                self.queue.push_front(song);
+            }
+        } else {
+            for _ in 0..n {
+                let song = self.queue.pop_back().unwrap();
+                self.queue.push_front(song);
+            }
+        }
         self.current_song.replace(self.queue[0].clone());
-        tracing::info!("Prev");
+        tracing::info!("Prev {n}");
         GetReturn::Ok
     }
 
@@ -26,7 +37,7 @@ impl StateStruct {
         }
 
         self.current_song.replace(self.queue[0].clone());
-        tracing::info!("Next");
+        tracing::info!("Next {n}");
         GetReturn::Ok
     }
 }
