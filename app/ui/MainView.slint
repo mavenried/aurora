@@ -249,7 +249,6 @@ export component MainView inherits Rectangle {
         searchResults: root.searchResults;
         submit(q, m) => {
             query-submit(q, m);
-            debug(q, m);
         }
         item-clicked(id) => {
             add(id);
