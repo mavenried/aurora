@@ -13,9 +13,9 @@
 
 # # MavenBlack
 bgd0 = "#000000"
-bgd1 = "#141414"
+bgd1 = "#0d0d0d"
 bgd2 = "#000000"
-bgd3 = "#0d0d0d"
+bgd3 = "#0d1414"
 bgd4 = "#141414"
 txt1 = "#eeeeee"
 txt2 = "#aaaaaa"

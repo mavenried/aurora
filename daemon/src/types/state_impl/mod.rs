@@ -76,7 +76,9 @@ impl StateStruct {
         self.sink.is_paused()
     }
     pub fn get_art(&mut self, id: Uuid) {
-        tracing::info!("Getting albumart for {id}");
+        let mut outpath = dirs::cache_dir()
+            .unwrap_or(PathBuf::from("/tmp/"))
+            .join("aurora-player");
 
         let song = match self.index.get_mut(&id) {
             Some(s) => s,
@@ -87,6 +89,12 @@ impl StateStruct {
             return;
         }
 
+        if std::fs::exists(outpath.join(outpath.join(format!("{id}.jpg")))).unwrap() {
+            song.art_path = Some(outpath.join(format!("{id}.jpg")));
+            return;
+        }
+
+        tracing::info!("Getting albumart for {id}");
         let Ok(tagged_file) = read_from_path(&song.path) else {
             return;
         };
@@ -108,8 +116,6 @@ impl StateStruct {
         }
 
         let resized = image::imageops::resize(&image, 100, 100, FilterType::Nearest);
-
-        let mut outpath = PathBuf::from("/tmp/aurora-player");
         if let Err(e) = std::fs::create_dir_all(&outpath) {
             tracing::error!("{e}");
             return;

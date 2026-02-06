@@ -273,7 +273,8 @@ pub async fn interface(app: slint::Weak<AuroraPlayer>) -> anyhow::Result<()> {
         let state = state_clone.clone();
         aurora.on_search(move |q, m| {
             let state = state.clone();
-            if !q.trim().is_empty() {
+
+            if q.trim().len() > 2 {
                 let query = if m == "By Artist" {
                     Request::Search(SearchType::ByArtist(q.trim().to_string()))
                 } else {
