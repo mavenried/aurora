@@ -24,7 +24,7 @@ export component AuroraPlayer inherits Window {
     callback pause();
     callback next();
     callback seek(float);
-    callback search(string, string);
+    callback search(string, string, bool);
     callback add(string);
     callback refresh-playlists();
     callback select-playlist(string);
@@ -107,8 +107,8 @@ export component AuroraPlayer inherits Window {
                     searchResults: root.searchResults;
                     current-playlist: root.playlistResult;
                     playlists: root.playlistsList;
-                    query-submit(q, e) => {
-                        search(q, e);
+                    query-submit(q, m, f) => {
+                        search(q, m, f);
                     }
                     add(s) => {
                         root.add(s);

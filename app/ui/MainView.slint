@@ -6,7 +6,7 @@ export component SearchView inherits VerticalBox {
     in-out property <string> searchMode: "By Title";
     in-out property <string> query: "";
     in property <[Song]> searchResults;
-    callback submit(string, string);
+    callback submit(string, string, bool);
     callback item-clicked(string);
     padding: 5px;
 
@@ -42,7 +42,10 @@ export component SearchView inherits VerticalBox {
                             color: Theme.txt1;
                             text <=> query;
                             changed text => {
-                                submit(query, searchMode);
+                                submit(query, searchMode, false);
+                            }
+                            accepted => {
+                                submit(query, searchMode, true)
                             }
                         }
                     }
@@ -55,7 +58,7 @@ export component SearchView inherits VerticalBox {
                 model: ["By Artist", "By Title"];
                 current <=> searchMode;
                 changed current => {
-                    submit(query, searchMode);
+                    submit(query, searchMode, false);
                 }
             }
         }
@@ -222,7 +225,7 @@ export component MainView inherits Rectangle {
     in property <[PlaylistMinimal]> playlists;
     in property <Playlist> current-playlist;
     in property <bool> searchOverflow;
-    callback query-submit(string, string);
+    callback query-submit(string, string, bool);
     callback add(string);
     callback get-all-playlists();
     callback get-playlist(string);
@@ -247,8 +250,8 @@ export component MainView inherits Rectangle {
         ]
 
         searchResults: root.searchResults;
-        submit(q, m) => {
-            query-submit(q, m);
+        submit(q, m, f) => {
+            query-submit(q, m, f);
         }
         item-clicked(id) => {
             add(id);

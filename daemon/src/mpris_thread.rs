@@ -12,7 +12,7 @@ pub enum PlayerCommand {
 pub async fn init(state: State) -> anyhow::Result<()> {
     let (tx, mut rx) = mpsc::unbounded_channel::<PlayerCommand>();
 
-    tracing::info!("Watcher thread started.");
+    tracing::info!("MPRIS thread started.");
     std::thread::spawn(move || {
         let rt = tokio::runtime::Runtime::new().unwrap();
         rt.block_on(async {
