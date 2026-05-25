@@ -6,7 +6,7 @@ import { ScrollView } from "CustomComp.slint";
 export component QueueView inherits Rectangle {
     in property <[Song]> queue;
     callback queue-click(int);
-    callback queue-remove(string);
+    callback queue-remove(int);
     callback queue-clear();
 
     width: 400px;
@@ -71,9 +71,9 @@ export component QueueView inherits Rectangle {
                             //scroll.viewport-y = 0;
                         pointer-event(event) => {
                         if event.button == PointerEventButton.right && event.kind == PointerEventKind.down {
-                            queue-remove(item.id);
+                            queue-remove(i+1);
                         } else if event.button == PointerEventButton.left && event.kind == PointerEventKind.down {
-                            queue-click(i);
+                            queue-click(i+1);
                         }
                     }
                 }

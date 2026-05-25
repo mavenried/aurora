@@ -264,8 +264,7 @@ pub async fn interface(app: slint::Weak<AuroraPlayer>) -> anyhow::Result<()> {
         aurora.on_queue_remove(move |n| {
             let state = state.clone();
             tokio::spawn(async move {
-                let id = Uuid::parse_str(n.as_str()).unwrap();
-                let req = Request::RemoveSong(id);
+                let req = Request::RemoveSongAt(n as usize);
                 let _ = state.lock().await.writer_tx.send(req).await;
             });
         });
@@ -320,15 +319,6 @@ pub async fn interface(app: slint::Weak<AuroraPlayer>) -> anyhow::Result<()> {
 
         let state = state_clone.clone();
         aurora.on_add(move |id| {
-            let state = state.clone();
-            let id = uuid::Uuid::parse_str(&id).unwrap();
-            tokio::spawn(async move {
-                let _ = state.lock().await.writer_tx.send(Request::Play(id)).await;
-            });
-        });
-
-        let state = state_clone.clone();
-        aurora.on_play_now(move |id| {
             let state = state.clone();
             let id = uuid::Uuid::parse_str(&id).unwrap();
             tokio::spawn(async move {

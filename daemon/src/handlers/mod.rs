@@ -16,6 +16,7 @@ pub mod next_prev;
 mod pause;
 mod playlist;
 mod remove_song;
+mod remove_song_at;
 mod replace_queue;
 mod search;
 mod seek;
@@ -82,6 +83,7 @@ pub async fn handle_client(
                 replace_queue::replace_queue(&writer, &state, queue).await
             }
             Request::RemoveSong(id) => remove_song::remove_song(&state, id).await,
+            Request::RemoveSongAt(index) => remove_song_at::remove_song_at(&state, index).await,
             Request::PlaylistDelete(id) => Ok(()),
         } {
             tracing::error!("Err: {err}");

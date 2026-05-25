@@ -403,12 +403,11 @@ export component ContextMenu inherits Rectangle {
     in property <length> x-position: 0px;
     in property <length> y-position: 0px;
     in property <string> song-id;
-    callback play-now(string);
     callback add-to-queue(string);
     callback play-next(string);
 
     width: 200px;
-    height: 130px;
+    height: 90px;
     background: Theme.bgd2;
     border-radius: 10px;
     border-width: 1px;
@@ -428,11 +427,6 @@ export component ContextMenu inherits Rectangle {
         height: 100%;
         width: 100%;
 
-        MenuItem {
-            text: "Play Now";
-            width: 100%;
-            clicked => { root.play-now(root.song-id); root.menu-visible = false; }
-        }
         MenuItem {
             text: "Play Next";
             width: 100%;
