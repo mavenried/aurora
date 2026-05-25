@@ -1,4 +1,5 @@
 import { QueueView } from "QueueView.slint";
+import { ContextMenu } from "CustomComp.slint";
 import { TabSelectorView } from "TabSelectorView.slint";
 import { MainView } from "MainView.slint";
 import { NowPlayingView } from "NowPlayingView.slint";
@@ -26,9 +27,13 @@ export component AuroraPlayer inherits Window {
     callback seek(float);
     callback search(string, string, bool);
     callback add(string);
+    callback play-now(string);
+    callback enqueue(string);
+    callback play-next(string);
     callback refresh-playlists();
     callback select-playlist(string);
     callback replace-queue(Playlist);
+    callback show-context-menu(string, length, length);
 
     in-out property <string> Title: "Nothing Playing";
     in-out property <string> Artists: "No artist";
@@ -49,6 +54,10 @@ export component AuroraPlayer inherits Window {
     };
 
     in-out property <Tabs> active-view: Tabs.Playlists;
+    in-out property <bool> context-menu-visible: false;
+    in-out property <length> context-menu-x: 0px;
+    in-out property <length> context-menu-y: 0px;
+    in-out property <string> context-menu-song-id: "";
 
     title: "Aurora Player";
 
@@ -58,6 +67,17 @@ export component AuroraPlayer inherits Window {
     preferred-width: 1422px;
 
     default-font-family: "Noto Sans JP";
+
+    // Context menu instance
+    context-menu := ContextMenu {
+        menu-visible <=> root.context-menu-visible;
+        x-position <=> root.context-menu-x;
+        y-position <=> root.context-menu-y;
+        song-id <=> root.context-menu-song-id;
+        play-now(id) => { root.play-now(id); }
+        play-next(id) => { root.play-next(id); }
+        add-to-queue(id) => { root.enqueue(id); }
+    }
 
     Rectangle {
         background: Theme.bgd0;
@@ -118,6 +138,12 @@ export component AuroraPlayer inherits Window {
                     }
                     replace-queue(pl) => {
                         root.replace-queue(pl)
+                    }
+                    show-context-menu(id, x, y) => {
+                        root.context-menu-song-id = id;
+                        root.context-menu-x = x;
+                        root.context-menu-y = y;
+                        root.context-menu-visible = true;
                     }
                 }
 

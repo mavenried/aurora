@@ -8,6 +8,7 @@ export component SearchView inherits VerticalBox {
     in property <[Song]> searchResults;
     callback submit(string, string, bool);
     callback item-clicked(string);
+    callback show-context-menu(string, length, length);
     padding: 5px;
 
     VerticalLayout {
@@ -69,6 +70,9 @@ export component SearchView inherits VerticalBox {
             item-clicked(id) => {
                 item-clicked(id);
             }
+            show-context-menu(id, x, y) => {
+                show-context-menu(id, x, y);
+            }
         }
     }
 }
@@ -79,6 +83,7 @@ export component PlaylistView inherits VerticalBox {
     in-out property <Playlist> current-playlist;
     callback get-playlist(string);
     callback item-clicked(string);
+    callback show-context-menu(string, length, length);
     callback replace-queue(Playlist);
     padding: 5px;
 
@@ -212,6 +217,9 @@ export component PlaylistView inherits VerticalBox {
                 item-clicked(id) => {
                     item-clicked(id);
                 }
+                show-context-menu(id, x, y) => {
+                    show-context-menu(id, x, y);
+                }
             }
         }
     }
@@ -230,6 +238,7 @@ export component MainView inherits Rectangle {
     callback get-all-playlists();
     callback get-playlist(string);
     callback replace-queue(Playlist);
+    callback show-context-menu(string, length, length);
 
     SearchView {
         states [
@@ -255,6 +264,9 @@ export component MainView inherits Rectangle {
         }
         item-clicked(id) => {
             add(id);
+        }
+        show-context-menu(id, x, y) => {
+            show-context-menu(id, x, y);
         }
     }
 
@@ -282,6 +294,9 @@ export component MainView inherits Rectangle {
         }
         item-clicked(id) => {
             add(id);
+        }
+        show-context-menu(id, x, y) => {
+            show-context-menu(id, x, y);
         }
         replace-queue(pl) => {
             replace-queue(pl);

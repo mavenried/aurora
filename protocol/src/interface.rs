@@ -5,6 +5,8 @@ use uuid::Uuid;
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum Request {
     Play(Uuid),
+    Enqueue(Uuid),
+    PlayNext(Uuid),
     PlaylistList,
     PlaylistGet(Uuid),
     PlaylistCreate(PlaylistIn),

@@ -328,6 +328,43 @@ pub async fn interface(app: slint::Weak<AuroraPlayer>) -> anyhow::Result<()> {
         });
 
         let state = state_clone.clone();
+        aurora.on_play_now(move |id| {
+            let state = state.clone();
+            let id = uuid::Uuid::parse_str(&id).unwrap();
+            tokio::spawn(async move {
+                let _ = state.lock().await.writer_tx.send(Request::Play(id)).await;
+            });
+        });
+
+        let state = state_clone.clone();
+        aurora.on_enqueue(move |id| {
+            let state = state.clone();
+            let id = uuid::Uuid::parse_str(&id).unwrap();
+            tokio::spawn(async move {
+                let _ = state
+                    .lock()
+                    .await
+                    .writer_tx
+                    .send(Request::Enqueue(id))
+                    .await;
+            });
+        });
+
+        let state = state_clone.clone();
+        aurora.on_play_next(move |id| {
+            let state = state.clone();
+            let id = uuid::Uuid::parse_str(&id).unwrap();
+            tokio::spawn(async move {
+                let _ = state
+                    .lock()
+                    .await
+                    .writer_tx
+                    .send(Request::PlayNext(id))
+                    .await;
+            });
+        });
+
+        let state = state_clone.clone();
         aurora.on_seek(move |value| {
             let state = state.clone();
             tokio::spawn(async move {

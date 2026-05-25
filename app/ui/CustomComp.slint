@@ -303,6 +303,7 @@ export component PlList inherits VerticalLayout {
 export component SongList inherits VerticalLayout {
     in property <[Song]> items;
     callback item-clicked(string);
+    callback show-context-menu(string, length, length);
     Rectangle {
         border-radius: 10px;
         clip: true;
@@ -319,6 +320,11 @@ export component SongList inherits VerticalLayout {
                     touch := TouchArea {
                         clicked => {
                             item-clicked(item.id);
+                        }
+                        pointer-event(event) => {
+                            if event.button == PointerEventButton.right && event.kind == PointerEventKind.down {
+                                show-context-menu(item.id, touch.absolute-position.x + touch.mouse-x, touch.absolute-position.y + touch.mouse-y);
+                            }
                         }
                     }
 
@@ -356,6 +362,86 @@ export component SongList inherits VerticalLayout {
                     }
                 }
             }
+        }
+    }
+}
+
+export component MenuItem inherits Rectangle {
+    in property <string> text;
+    callback clicked;
+    in-out property <bool> enabled: true;
+
+    height: 40px;
+    border-radius: 5px;
+    background: touch.has-hover && root.enabled ? Theme.bgd3 : Theme.bgd2;
+    opacity: root.enabled ? 1.0 : 0.5;
+    animate background { duration: 100ms; }
+
+    touch := TouchArea {
+        width: 100%;
+        height: 100%;
+        enabled: root.enabled;
+        clicked => {
+            if root.enabled { root.clicked(); }
+        }
+    }
+
+    HorizontalLayout {
+        padding: 10px;
+        Text {
+            text: root.text;
+            color: Theme.txt1;
+            font-size: 16px;
+            vertical-alignment: center;
+            horizontal-alignment: left;
+        }
+    }
+}
+
+export component ContextMenu inherits Rectangle {
+    in-out property <bool> menu-visible: false;
+    in property <length> x-position: 0px;
+    in property <length> y-position: 0px;
+    in property <string> song-id;
+    callback play-now(string);
+    callback add-to-queue(string);
+    callback play-next(string);
+
+    width: 200px;
+    height: 130px;
+    background: Theme.bgd2;
+    border-radius: 10px;
+    border-width: 1px;
+    border-color: Theme.bgd4;
+    drop-shadow-color: Theme.bgd0;
+    drop-shadow-blur: 10px;
+    z: 1000;
+    clip: true;
+
+    x: root.x-position;
+    y: root.y-position;
+    visible: root.menu-visible;
+
+    VerticalLayout {
+        spacing: 0px;
+        padding: 5px;
+        height: 100%;
+        width: 100%;
+
+        MenuItem {
+            text: "Play Now";
+            width: 100%;
+            clicked => { root.play-now(root.song-id); root.menu-visible = false; }
+        }
+        MenuItem {
+            text: "Play Next";
+            width: 100%;
+            clicked => { root.play-next(root.song-id); root.menu-visible = false; }
+        }
+        MenuItem {
+            text: "Add to Queue";
+            width: 100%;
+            clicked => { root.add-to-queue(root.song-id); root.menu-visible = false; }
         }
     }
 }

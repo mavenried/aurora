@@ -11,6 +11,7 @@ use crate::{
 
 mod clear;
 mod enqueue;
+mod enqueue_at;
 pub mod next_prev;
 mod pause;
 mod playlist;
@@ -62,6 +63,12 @@ pub async fn handle_client(
         tracing::debug!("{request:?}");
         if let Err(err) = match request {
             Request::Play(song_uuid) => enqueue::enqueue(&writer, &state, song_uuid).await,
+            Request::Enqueue(song_uuid) => {
+                enqueue_at::enqueue_at(&writer, &state, song_uuid, None).await
+            }
+            Request::PlayNext(song_uuid) => {
+                enqueue_at::enqueue_at(&writer, &state, song_uuid, Some(1)).await
+            }
             Request::PlaylistList => playlist::playlist_list(&writer).await,
             Request::PlaylistGet(pl_uuid) => playlist::playlist_get(&writer, &state, pl_uuid).await,
             Request::Search(st) => search::search(&writer, &state, st).await,
