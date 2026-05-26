@@ -14,4 +14,4 @@ Indev by [@mavenried](https://github.com/mavenried).
 
 ## To Fix
 
-- [ ] go back to deleting from queue based on index. filtering out based on id will break when duplicates of same song exist in queue. could result in undocumented behaviour
+- [x] go back to deleting from queue based on index. filtering out based on id will break when duplicates of same song exist in queue. could result in undocumented behaviour
