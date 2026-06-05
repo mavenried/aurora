@@ -1,0 +1,131 @@
+import { VerticalBox, HorizontalBox } from "std-widgets.slint";
+import { ArtistList, SongList } from "CustomComp.slint";
+import { Song, Theme } from "Types.slint";
+
+export component LibraryView inherits VerticalBox {
+    in property <[string]> artists;
+    in property <[Song]> artist-songs;
+    in-out property <bool> in-artist: false;
+    in-out property <string> current-artist: "";
+    in property <string> current-song-id: "";
+
+    callback artist-clicked(string);
+    callback item-clicked(string);
+    callback show-context-menu(string, length, length);
+    callback toggle-song-selection(string);
+
+    padding: 5px;
+    spacing: 5px;
+
+    Rectangle {
+        // Artist list (visible when not in-artist)
+        ArtistList {
+            states [
+                visible when !in-artist: {
+                    opacity: 1;
+                    visible: true;
+                    in-out {
+                        animate opacity { duration: 100ms; }
+                    }
+                }
+                invisible when in-artist: {
+                    opacity: 0;
+                    visible: false;
+                    in-out {
+                        animate opacity { duration: 100ms; }
+                    }
+                }
+            ]
+            items: artists;
+            item-clicked(name) => {
+                root.current-artist = name;
+                root.in-artist = true;
+                artist-clicked(name);
+            }
+        }
+
+        // Artist detail view (visible when in-artist)
+        VerticalLayout {
+            states [
+                visible when in-artist: {
+                    opacity: 1;
+                    visible: true;
+                    in-out {
+                        animate opacity { duration: 100ms; }
+                    }
+                }
+                invisible when !in-artist: {
+                    opacity: 0;
+                    visible: false;
+                    in-out {
+                        animate opacity { duration: 100ms; }
+                    }
+                }
+            ]
+            spacing: 10px;
+            padding: 0px;
+
+            // Header row: back button + artist name
+            HorizontalLayout {
+                padding: 0px;
+                height: 60px;
+                spacing: 5px;
+
+                Rectangle {
+                    height: parent.height;
+                    width: parent.height;
+                    background: backTouch.has-hover ? Theme.bgd0 : Theme.bgd1;
+                    animate background { duration: 200ms; }
+                    border-radius: 10px;
+                    Text {
+                        height: parent.height;
+                        width: parent.width;
+                        text: "";
+                        font-family: "JetbrainsMono Nerd Font Mono";
+                        font-size: 40px;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                        color: Theme.txt1;
+                    }
+                    backTouch := TouchArea {
+                        clicked => {
+                            root.in-artist = false;
+                            root.current-artist = "";
+                        }
+                    }
+                }
+
+                Rectangle {
+                    background: Theme.bgd1;
+                    border-radius: 10px;
+                    HorizontalLayout {
+                        padding: 10px;
+                        padding-right: 20px;
+                        padding-left: 20px;
+                        Text {
+                            text: root.current-artist;
+                            color: Theme.txt1;
+                            font-size: 28px;
+                            vertical-alignment: center;
+                            horizontal-alignment: left;
+                        }
+                    }
+                }
+            }
+
+            SongList {
+                items: artist-songs;
+                current-song-id: root.current-song-id;
+                item-clicked(id) => {
+                    item-clicked(id);
+                }
+                show-context-menu(id, x, y) => {
+                    show-context-menu(id, x, y);
+                }
+                toggle-selection(id) => {
+                    toggle-song-selection(id);
+                }
+            }
+        }
+    }
+}

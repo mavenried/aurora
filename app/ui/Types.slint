@@ -10,7 +10,8 @@ export struct CurrentSong {
 
 export enum Tabs {
     Search,
-    Playlists
+    Playlists,
+    Library
 }
 
 export struct Song {
@@ -18,6 +19,8 @@ export struct Song {
     artists: string,
     album_art: image,
     id: string,
+    selected: bool,
+    duration: string,
 }
 
 export struct PlaylistMinimal {

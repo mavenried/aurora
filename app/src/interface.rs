@@ -1,4 +1,4 @@
-use std::{path::PathBuf, process::Command, sync::Arc, time::Duration, vec};
+use std::{collections::HashSet, path::PathBuf, process::Command, sync::Arc, time::Duration, vec};
 
 use aurora_protocol::{Request, Response, SearchType};
 use slint::{ComponentHandle, Image, Model, Rgba8Pixel, SharedPixelBuffer};
@@ -11,7 +11,6 @@ use tokio::{
     },
     sync::{Mutex, mpsc::Receiver},
 };
-use uuid::Uuid;
 
 use crate::{
     AuroraPlayer, DEFAULT_ART,
@@ -72,8 +71,19 @@ async fn unix_recver(
 
         match res {
             Response::Status(status) => {
-                let state_locked = state.lock().await;
+                let mut state_locked = state.lock().await;
                 let default_art = state_locked.default_art_buffer.clone();
+                // Track current song id
+                let current_id = status
+                    .current_song
+                    .as_ref()
+                    .map(|s| s.id.to_string())
+                    .unwrap_or_default();
+                state_locked.current_song_id = current_id.clone();
+                let shuffle = status.shuffle;
+                let repeat = status.repeat;
+                let volume = status.volume;
+                drop(state_locked);
 
                 let _ = app.upgrade_in_event_loop(move |aurora| {
                     aurora.set_Title(
@@ -118,8 +128,11 @@ async fn unix_recver(
                     });
 
                     aurora.set_is_paused(status.is_paused);
-
                     aurora.set_position(status.position.as_millis() as i32);
+                    aurora.set_current_playing_id(current_id.into());
+                    aurora.set_shuffle(shuffle);
+                    aurora.set_repeat_mode(repeat as i32);
+                    aurora.set_volume(volume);
                 });
             }
 
@@ -129,14 +142,17 @@ async fn unix_recver(
                 state.queue = queue;
                 state.update_queue(app.clone()).await;
             }
-            Response::SearchResults(mut results) => {
+            Response::SearchResults(results) => {
                 tracing::info!("Received: SearchResults, len:{}", results.len());
-                // if results.len() > 100 {
-                //     results = results[..100].to_vec();
-                // }
                 let mut state = state.lock().await;
-                state.search_results = results;
-                state.update_search_results(app.clone()).await;
+                if state.pending_artist_search {
+                    state.pending_artist_search = false;
+                    state.artist_songs = results;
+                    state.update_artist_songs(app.clone()).await;
+                } else {
+                    state.search_results = results;
+                    state.update_search_results(app.clone()).await;
+                }
             }
 
             Response::PlaylistResults(result) => {
@@ -187,6 +203,19 @@ async fn unix_recver(
                         .set_bgd4(hex_to_u8(theme.bgd4));
                 });
             }
+            Response::ArtistList(list) => {
+                tracing::info!("Received: ArtistList, len:{}", list.len());
+                let mut state_locked = state.lock().await;
+                state_locked.artist_list = list.clone();
+                drop(state_locked);
+                let _ = app.upgrade_in_event_loop(move |aurora| {
+                    use std::rc::Rc;
+                    use slint::{ModelRc, VecModel};
+                    let items: Vec<slint::SharedString> =
+                        list.iter().map(|s| s.as_str().into()).collect();
+                    aurora.set_artist_list(ModelRc::new(Rc::new(VecModel::from(items))));
+                });
+            }
             other => tracing::info!("{other:?}"),
         }
     }
@@ -215,9 +244,15 @@ pub async fn interface(app: slint::Weak<AuroraPlayer>) -> anyhow::Result<()> {
         playlist_result: None,
         playlist_list_results: vec![],
         search_results: vec![],
+        selected_song_ids: HashSet::new(),
+        current_song_id: String::new(),
+        artist_list: vec![],
+        artist_songs: vec![],
+        pending_artist_search: false,
     }));
 
     let state_clone = state.clone();
+    let app_for_sel = app.clone();
     let _ = app.upgrade_in_event_loop(move |aurora: AuroraPlayer| {
         let state = state_clone.clone();
         aurora.on_queue_click(move |n| {
@@ -381,6 +416,169 @@ pub async fn interface(app: slint::Weak<AuroraPlayer>) -> anyhow::Result<()> {
                 let _ = state.writer_tx.send(Request::Clear).await;
                 // let _ = state.writer_tx.send(Request::Play(songs[0])).await;
                 let _ = state.writer_tx.send(Request::ReplaceQueue(songs)).await;
+            });
+        });
+
+        let state = state_clone.clone();
+        let app_sel = app_for_sel.clone();
+        aurora.on_toggle_song_selection(move |id| {
+            let state = state.clone();
+            let app = app_sel.clone();
+            let id_str = id.to_string();
+            tokio::spawn(async move {
+                let mut state = state.lock().await;
+                if state.selected_song_ids.contains(id_str.as_str()) {
+                    state.selected_song_ids.remove(id_str.as_str());
+                } else {
+                    state.selected_song_ids.insert(id_str);
+                }
+                state.update_search_results(app.clone()).await;
+                if state.playlist_result.is_some() {
+                    state.update_playlist_results(app.clone()).await;
+                }
+            });
+        });
+
+        let state = state_clone.clone();
+        aurora.on_create_playlist(move |name| {
+            let state = state.clone();
+            let name_str = name.trim().to_string();
+            if !name_str.is_empty() {
+                tokio::spawn(async move {
+                    let _ = state
+                        .lock()
+                        .await
+                        .writer_tx
+                        .send(Request::PlaylistCreate(aurora_protocol::PlaylistIn {
+                            title: name_str,
+                            songs: vec![],
+                        }))
+                        .await;
+                });
+            }
+        });
+
+        let state = state_clone.clone();
+        aurora.on_rename_playlist(move |playlist_id_str, new_title| {
+            let state = state.clone();
+            let new_title = new_title.trim().to_string();
+            if !new_title.is_empty() {
+                tokio::spawn(async move {
+                    if let Ok(playlist_id) = uuid::Uuid::parse_str(&playlist_id_str) {
+                        let _ = state
+                            .lock()
+                            .await
+                            .writer_tx
+                            .send(Request::PlaylistRename { playlist_id, new_title })
+                            .await;
+                    }
+                });
+            }
+        });
+
+        let state = state_clone.clone();
+        aurora.on_delete_playlist(move |playlist_id_str| {
+            let state = state.clone();
+            tokio::spawn(async move {
+                if let Ok(id) = uuid::Uuid::parse_str(&playlist_id_str) {
+                    let _ = state
+                        .lock()
+                        .await
+                        .writer_tx
+                        .send(Request::PlaylistDelete(id))
+                        .await;
+                }
+            });
+        });
+
+        let state = state_clone.clone();
+        aurora.on_remove_song_from_playlist(move |playlist_id_str, song_id_str| {
+            let state = state.clone();
+            tokio::spawn(async move {
+                if let (Ok(playlist_id), Ok(song_id)) = (
+                    uuid::Uuid::parse_str(&playlist_id_str),
+                    uuid::Uuid::parse_str(&song_id_str),
+                ) {
+                    let _ = state
+                        .lock()
+                        .await
+                        .writer_tx
+                        .send(Request::PlaylistRemoveSong { playlist_id, song_id })
+                        .await;
+                }
+            });
+        });
+
+        let state = state_clone.clone();
+        aurora.on_add_songs_to_playlist(move |playlist_id_str, primary_song_id| {
+            let state = state.clone();
+            tokio::spawn(async move {
+                let (song_ids, writer_tx) = {
+                    let state_locked = state.lock().await;
+                    let song_ids: Vec<uuid::Uuid> = if !state_locked.selected_song_ids.is_empty() {
+                        state_locked
+                            .selected_song_ids
+                            .iter()
+                            .filter_map(|id| uuid::Uuid::parse_str(id).ok())
+                            .collect()
+                    } else {
+                        uuid::Uuid::parse_str(&primary_song_id)
+                            .map(|id| vec![id])
+                            .unwrap_or_default()
+                    };
+                    (song_ids, state_locked.writer_tx.clone())
+                };
+                if let Ok(playlist_id) = uuid::Uuid::parse_str(&playlist_id_str) {
+                    let _ = writer_tx
+                        .send(Request::PlaylistAddSongs { playlist_id, song_ids })
+                        .await;
+                }
+            });
+        });
+
+        let state = state_clone.clone();
+        aurora.on_set_shuffle(move |b| {
+            let state = state.clone();
+            tokio::spawn(async move {
+                let _ = state.lock().await.writer_tx.send(Request::SetShuffle(b)).await;
+            });
+        });
+
+        let state = state_clone.clone();
+        aurora.on_set_repeat(move |r| {
+            let state = state.clone();
+            tokio::spawn(async move {
+                let _ = state.lock().await.writer_tx.send(Request::SetRepeat(r as u8)).await;
+            });
+        });
+
+        let state = state_clone.clone();
+        aurora.on_set_volume(move |v| {
+            let state = state.clone();
+            tokio::spawn(async move {
+                let _ = state.lock().await.writer_tx.send(Request::SetVolume(v)).await;
+            });
+        });
+
+        let state = state_clone.clone();
+        aurora.on_get_artist_list(move || {
+            let state = state.clone();
+            tokio::spawn(async move {
+                let _ = state.lock().await.writer_tx.send(Request::GetArtistList).await;
+            });
+        });
+
+        let state = state_clone.clone();
+        aurora.on_get_songs_by_artist(move |artist| {
+            let state = state.clone();
+            let artist_str = artist.to_string();
+            tokio::spawn(async move {
+                let mut state_locked = state.lock().await;
+                state_locked.pending_artist_search = true;
+                let _ = state_locked
+                    .writer_tx
+                    .send(Request::Search(aurora_protocol::SearchType::ByArtist(artist_str)))
+                    .await;
             });
         });
 

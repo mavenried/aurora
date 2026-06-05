@@ -19,6 +19,9 @@ pub struct StateStruct {
     pub clients: Vec<WriteSocket>,
     pub audio: Option<source::SeekableAudio>,
     pub theme: Theme,
+    pub volume: f32,
+    pub shuffle: bool,
+    pub repeat: u8,
 }
 
 mod playback;
@@ -38,6 +41,9 @@ impl StateStruct {
             } else {
                 Duration::ZERO
             },
+            volume: self.volume,
+            shuffle: self.shuffle,
+            repeat: self.repeat,
         }
     }
     pub async fn add(&mut self) {

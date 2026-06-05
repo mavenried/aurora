@@ -20,33 +20,76 @@ export component PlayerView inherits Rectangle {
     in-out property <int> value;
     in property <int> duration;
     in property <bool> is-paused;
+    in-out property <bool> shuffle: false;
+    in-out property <int> repeat: 0;
+    in-out property <float> volume: 1.0;
 
     callback prev();
     callback pause();
     callback next();
     callback seek(float);
+    callback set-shuffle(bool);
+    callback set-repeat(int);
+    callback set-volume(float);
 
     VerticalLayout {
         padding: 5px;
         spacing: 0px;
+
+        // Controls row
         HorizontalLayout {
-            padding: 10px;
+            padding: 6px;
+            spacing: 0px;
+
+            // Left: current time
             VerticalLayout {
-                padding: 10px;
+                width: 80px;
                 alignment: LayoutAlignment.center;
+                padding: 5px;
                 Text {
                     text: TimeUtils.ms_to_minsec(value);
-                    font-size: 20px;
+                    font-size: 18px;
                     color: Theme.txt1;
+                    horizontal-alignment: left;
                 }
             }
 
+            // Center: shuffle + prev + play + next + repeat
             VerticalLayout {
+                horizontal-stretch: 1;
                 alignment: LayoutAlignment.center;
                 HorizontalLayout {
                     alignment: LayoutAlignment.center;
-                    spacing: 10px;
+                    spacing: 8px;
 
+                    // Shuffle button
+                    Rectangle {
+                        width: 36px;
+                        height: 36px;
+                        border-radius: 18px;
+                        background: shuffleTA.has-hover ? Theme.bgd4 : Theme.bgd3;
+                        animate background { duration: 100ms; }
+                        Text {
+                            vertical-alignment: TextVerticalAlignment.center;
+                            horizontal-alignment: TextHorizontalAlignment.center;
+                            width: 36px;
+                            height: 36px;
+                            text: "󰒝";
+                            font-size: 22px;
+                            font-family: "JetbrainsMono Nerd Font Mono";
+                            color: root.shuffle ? Theme.acct : Theme.txt2;
+                        }
+                        shuffleTA := TouchArea {
+                            height: parent.height;
+                            width: parent.width;
+                            clicked => {
+                                root.shuffle = !root.shuffle;
+                                set-shuffle(root.shuffle);
+                            }
+                        }
+                    }
+
+                    // Prev button
                     Rectangle {
                         width: 40px;
                         height: 40px;
@@ -58,21 +101,18 @@ export component PlayerView inherits Rectangle {
                             horizontal-alignment: TextHorizontalAlignment.center;
                             width: 40px;
                             height: 40px;
-
                             text: "󰒮";
                             font-size: 30px;
                             color: Theme.btns;
                         }
-
                         prevTA := TouchArea {
                             height: parent.height;
                             width: parent.width;
-                            clicked => {
-                                prev()
-                            }
+                            clicked => { prev() }
                         }
                     }
 
+                    // Play/Pause button
                     Rectangle {
                         width: 40px;
                         height: 40px;
@@ -84,21 +124,18 @@ export component PlayerView inherits Rectangle {
                             horizontal-alignment: TextHorizontalAlignment.center;
                             width: 40px;
                             height: 40px;
-
-                            text: root.is-paused ? "" : "";
+                            text: root.is-paused ? "󰐊" : "󰏤";
                             font-size: root.is-paused ? 25px : 30px;
                             color: Theme.btns;
                         }
-
                         playTA := TouchArea {
                             height: parent.height;
                             width: parent.width;
-                            clicked => {
-                                pause();
-                            }
+                            clicked => { pause(); }
                         }
                     }
 
+                    // Next button
                     Rectangle {
                         width: 40px;
                         height: 40px;
@@ -110,35 +147,93 @@ export component PlayerView inherits Rectangle {
                             horizontal-alignment: TextHorizontalAlignment.center;
                             width: 40px;
                             height: 40px;
-
                             text: "󰒭";
                             font-size: 30px;
                             color: Theme.btns;
                         }
-
                         nextTA := TouchArea {
                             height: parent.height;
                             width: parent.width;
+                            clicked => { next() }
+                        }
+                    }
+
+                    // Repeat button
+                    Rectangle {
+                        width: 36px;
+                        height: 36px;
+                        border-radius: 18px;
+                        background: repeatTA.has-hover ? Theme.bgd4 : Theme.bgd3;
+                        animate background { duration: 100ms; }
+                        Text {
+                            vertical-alignment: TextVerticalAlignment.center;
+                            horizontal-alignment: TextHorizontalAlignment.center;
+                            width: 36px;
+                            height: 36px;
+                            text: root.repeat == 1 ? "󰑗" : "󰑖";
+                            font-size: 22px;
+                            font-family: "JetbrainsMono Nerd Font Mono";
+                            color: root.repeat == 1 ? Theme.acct : Theme.txt2;
+                        }
+                        repeatTA := TouchArea {
+                            height: parent.height;
+                            width: parent.width;
                             clicked => {
-                                next()
+                                root.repeat = root.repeat == 0 ? 1 : 0;
+                                set-repeat(root.repeat);
                             }
                         }
                     }
                 }
             }
 
-            VerticalLayout {
-                alignment: LayoutAlignment.center;
-                padding: 10px;
-                Text {
-                    text: TimeUtils.ms_to_minsec(duration);
-                    font-size: 20px;
-                    horizontal-alignment: TextHorizontalAlignment.right;
-                    color: Theme.txt1;
+            // Right: volume icon + slider + duration
+            HorizontalLayout {
+                width: 180px;
+                alignment: LayoutAlignment.end;
+                spacing: 5px;
+                padding: 5px;
+
+                VerticalLayout {
+                    alignment: LayoutAlignment.center;
+                    Text {
+                        text: "󰕾";
+                        font-size: 18px;
+                        font-family: "JetbrainsMono Nerd Font Mono";
+                        color: Theme.txt2;
+                        vertical-alignment: center;
+                    }
+                }
+
+                VerticalLayout {
+                    width: 80px;
+                    alignment: LayoutAlignment.center;
+                    CustomSlider {
+                        height: 10px;
+                        minimum: 0;
+                        maximum: 100;
+                        value: Math.round(root.volume * 100);
+                        released(v) => {
+                            root.volume = v / 100.0;
+                            set-volume(root.volume);
+                        }
+                    }
+                }
+
+                VerticalLayout {
+                    alignment: LayoutAlignment.center;
+                    padding: 5px;
+                    Text {
+                        text: TimeUtils.ms_to_minsec(duration);
+                        font-size: 18px;
+                        horizontal-alignment: TextHorizontalAlignment.right;
+                        color: Theme.txt1;
+                    }
                 }
             }
         }
 
+        // Seek slider row
         VerticalBox {
             alignment: LayoutAlignment.start;
             padding: 0px;

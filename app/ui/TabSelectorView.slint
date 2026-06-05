@@ -33,6 +33,7 @@ export component TabButton inherits Rectangle {
 export component TabSelectorView inherits Rectangle {
     in-out property <Tabs> active-view;
     callback refresh-playlists();
+    callback refresh-artists();
     height: 60px;
 
     Rectangle {
@@ -54,6 +55,15 @@ export component TabSelectorView inherits Rectangle {
                 active <=> active-view;
                 button-clicked => {
                     refresh-playlists()
+                }
+            }
+
+            TabButton {
+                label: "Library";
+                tab: Tabs.Library;
+                active <=> active-view;
+                button-clicked => {
+                    refresh-artists()
                 }
             }
         }

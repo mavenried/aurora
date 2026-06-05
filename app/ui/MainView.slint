@@ -1,14 +1,17 @@
 import { VerticalBox, HorizontalBox } from "std-widgets.slint";
 import { ComboBox, SongList, PlList } from "CustomComp.slint";
 import { Song, PlaylistMinimal, Playlist, Theme, Tabs }from "Types.slint";
+import { LibraryView } from "LibraryView.slint";
 
 export component SearchView inherits VerticalBox {
     in-out property <string> searchMode: "By Title";
     in-out property <string> query: "";
     in property <[Song]> searchResults;
+    in property <string> current-song-id: "";
     callback submit(string, string, bool);
     callback item-clicked(string);
     callback show-context-menu(string, length, length);
+    callback toggle-song-selection(string);
     padding: 5px;
 
     VerticalLayout {
@@ -25,7 +28,7 @@ export component SearchView inherits VerticalBox {
                     padding: 10px;
 
                     Text {
-                        text: " ";
+                        text: " ";
                         height: parent.height - 20px;
                         width: parent.height - 20px;
                         font-size: 30px;
@@ -67,11 +70,15 @@ export component SearchView inherits VerticalBox {
         SongList {
             z: -1;
             items: searchResults;
+            current-song-id: current-song-id;
             item-clicked(id) => {
                 item-clicked(id);
             }
             show-context-menu(id, x, y) => {
                 show-context-menu(id, x, y);
+            }
+            toggle-selection(id) => {
+                toggle-song-selection(id);
             }
         }
     }
@@ -81,10 +88,18 @@ export component PlaylistView inherits VerticalBox {
     in property <[PlaylistMinimal]> playlists;
     in-out property <bool> in-playlist;
     in-out property <Playlist> current-playlist;
+    in-out property <bool> creating-playlist: false;
+    in-out property <string> new-playlist-name: "";
+    in-out property <string> renaming-playlist-id: "";
+    in property <string> current-song-id: "";
     callback get-playlist(string);
     callback item-clicked(string);
     callback show-context-menu(string, length, length);
+    callback show-playlist-context-menu(string, string, length, length);
     callback replace-queue(Playlist);
+    callback create-playlist(string);
+    callback rename-playlist(string, string);
+    callback toggle-song-selection(string);
     padding: 5px;
 
     Rectangle {
@@ -109,6 +124,9 @@ export component PlaylistView inherits VerticalBox {
             item-clicked(id) => {
                 get-playlist(id);
                 in-playlist = true;
+            }
+            show-context-menu(id, title, x, y) => {
+                show-playlist-context-menu(id, title, x, y);
             }
         }
 
@@ -214,11 +232,153 @@ export component PlaylistView inherits VerticalBox {
 
             SongList {
                 items: current-playlist.songs;
+                current-song-id: current-song-id;
                 item-clicked(id) => {
                     item-clicked(id);
                 }
                 show-context-menu(id, x, y) => {
                     show-context-menu(id, x, y);
+                }
+                toggle-selection(id) => {
+                    toggle-song-selection(id);
+                }
+            }
+        }
+    }
+
+    // Unified create / rename form — slides in above the + button
+    Rectangle {
+        height: (!in-playlist && (creating-playlist || renaming-playlist-id != "")) ? 60px : 0px;
+        clip: true;
+        animate height {
+            duration: 150ms;
+            easing: ease-in-out-quad;
+        }
+        background: Theme.bgd1;
+        border-radius: 10px;
+
+        HorizontalLayout {
+            padding: 5px;
+            spacing: 5px;
+
+            Rectangle {
+                background: Theme.bgd2;
+                border-radius: 8px;
+                clip: true;
+                HorizontalLayout {
+                    padding: 10px;
+                    TextInput {
+                        font-size: 18px;
+                        color: Theme.txt1;
+                        vertical-alignment: center;
+                        text <=> new-playlist-name;
+                        accepted => {
+                            if new-playlist-name != "" {
+                                if creating-playlist {
+                                    create-playlist(new-playlist-name);
+                                    creating-playlist = false;
+                                } else if renaming-playlist-id != "" {
+                                    rename-playlist(renaming-playlist-id, new-playlist-name);
+                                    renaming-playlist-id = "";
+                                }
+                                new-playlist-name = "";
+                            }
+                        }
+                    }
+                }
+            }
+
+            Rectangle {
+                width: 50px;
+                border-radius: 8px;
+                background: confirm-touch.has-hover ? Theme.acct : Theme.bgd3;
+                animate background { duration: 100ms; }
+                Text {
+                    text: "";
+                    font-family: "JetbrainsMono Nerd Font Mono";
+                    color: Theme.bgd0;
+                    font-size: 20px;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+
+                confirm-touch := TouchArea {
+                    clicked => {
+                        if new-playlist-name != "" {
+                            if creating-playlist {
+                                create-playlist(new-playlist-name);
+                                creating-playlist = false;
+                            } else if renaming-playlist-id != "" {
+                                rename-playlist(renaming-playlist-id, new-playlist-name);
+                                renaming-playlist-id = "";
+                            }
+                            new-playlist-name = "";
+                        }
+                    }
+                }
+            }
+
+            Rectangle {
+                width: 50px;
+                border-radius: 8px;
+                background: cancel-touch.has-hover ? Theme.bgd3 : Theme.bgd2;
+                animate background { duration: 100ms; }
+                Text {
+                    text: "";
+                    font-family: "JetbrainsMono Nerd Font Mono";
+                    color: Theme.txt2;
+                    font-size: 20px;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+
+                cancel-touch := TouchArea {
+                    clicked => {
+                        creating-playlist = false;
+                        renaming-playlist-id = "";
+                        new-playlist-name = "";
+                    }
+                }
+            }
+        }
+    }
+
+    // Small + button at the very bottom
+    Rectangle {
+        height: !in-playlist ? 55px : 0px;
+        clip: true;
+        animate height {
+            duration: 150ms;
+            easing: ease-in-out-quad;
+        }
+
+        HorizontalLayout {
+            height: 55px;
+            alignment: end;
+            padding: 0px;
+
+            Rectangle {
+                width: 50px;
+                height: 50px;
+                border-radius: 10px;
+                background: plus-touch.has-hover ? Theme.bgd3 : Theme.bgd1;
+                animate background { duration: 100ms; }
+                Text {
+                    text: "+";
+                    color: Theme.acct;
+                    font-size: 28px;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+
+                plus-touch := TouchArea {
+                    clicked => {
+                        renaming-playlist-id = "";
+                        creating-playlist = !creating-playlist;
+                        if !creating-playlist {
+                            new-playlist-name = "";
+                        }
+                    }
                 }
             }
         }
@@ -233,12 +393,24 @@ export component MainView inherits Rectangle {
     in property <[PlaylistMinimal]> playlists;
     in property <Playlist> current-playlist;
     in property <bool> searchOverflow;
+    in property <[string]> artists;
+    in property <[Song]> artist-songs;
+    in property <string> current-song-id: "";
+    out property <bool> in-playlist <=> plView.in-playlist;
+    in-out property <string> renaming-playlist-id <=> plView.renaming-playlist-id;
+    in-out property <string> new-playlist-name <=> plView.new-playlist-name;
     callback query-submit(string, string, bool);
     callback add(string);
     callback get-all-playlists();
     callback get-playlist(string);
     callback replace-queue(Playlist);
     callback show-context-menu(string, length, length);
+    callback show-playlist-context-menu(string, string, length, length);
+    callback create-playlist(string);
+    callback rename-playlist(string, string);
+    callback toggle-song-selection(string);
+    callback get-artist-list();
+    callback get-songs-by-artist(string);
 
     SearchView {
         states [
@@ -259,6 +431,7 @@ export component MainView inherits Rectangle {
         ]
 
         searchResults: root.searchResults;
+        current-song-id: root.current-song-id;
         submit(q, m, f) => {
             query-submit(q, m, f);
         }
@@ -267,6 +440,9 @@ export component MainView inherits Rectangle {
         }
         show-context-menu(id, x, y) => {
             show-context-menu(id, x, y);
+        }
+        toggle-song-selection(id) => {
+            toggle-song-selection(id);
         }
     }
 
@@ -289,6 +465,7 @@ export component MainView inherits Rectangle {
         ]
         current-playlist: root.current-playlist;
         playlists: root.playlists;
+        current-song-id: root.current-song-id;
         get-playlist(id) => {
             get-playlist(id);
         }
@@ -298,8 +475,54 @@ export component MainView inherits Rectangle {
         show-context-menu(id, x, y) => {
             show-context-menu(id, x, y);
         }
+        show-playlist-context-menu(id, title, x, y) => {
+            show-playlist-context-menu(id, title, x, y);
+        }
         replace-queue(pl) => {
             replace-queue(pl);
+        }
+        create-playlist(name) => {
+            create-playlist(name);
+        }
+        rename-playlist(id, name) => {
+            rename-playlist(id, name);
+        }
+        toggle-song-selection(id) => {
+            toggle-song-selection(id);
+        }
+    }
+
+    LibraryView {
+        states [
+            visible when active-view == Tabs.Library: {
+                opacity: 1;
+                visible: true;
+                in-out {
+                    animate opacity { duration: 100ms; }
+                }
+            }
+            invisible when active-view != Tabs.Library: {
+                opacity: 0;
+                visible: false;
+                in-out {
+                    animate opacity { duration: 100ms; }
+                }
+            }
+        ]
+        artists: root.artists;
+        artist-songs: root.artist-songs;
+        current-song-id: root.current-song-id;
+        artist-clicked(name) => {
+            root.get-songs-by-artist(name);
+        }
+        item-clicked(id) => {
+            root.add(id);
+        }
+        show-context-menu(id, x, y) => {
+            root.show-context-menu(id, x, y);
+        }
+        toggle-song-selection(id) => {
+            root.toggle-song-selection(id);
         }
     }
 }

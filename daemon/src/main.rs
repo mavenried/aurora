@@ -14,6 +14,7 @@ mod handlers;
 mod helpers;
 mod types;
 
+mod file_watcher_thread;
 mod mpris_thread;
 mod theme_thread;
 mod watcher_thread;
@@ -78,10 +79,16 @@ async fn async_main() -> std::io::Result<()> {
         sink: Arc::new(sink),
         audio: None,
         theme: theme_thread::get_config(),
+        volume: 1.0,
+        shuffle: false,
+        repeat: 0,
     }));
 
     let state_clone = state.clone();
     tokio::spawn(async move { watcher_thread::init(state_clone).await });
+
+    let state_clone = state.clone();
+    tokio::spawn(async move { file_watcher_thread::init(state_clone).await });
 
     let state_clone = state.clone();
     tokio::spawn(async move { mpris_thread::init(state_clone).await });

@@ -14,6 +14,9 @@ pub struct Status {
     pub current_song: Option<Song>,
     pub is_paused: bool,
     pub position: Duration,
+    pub volume: f32,
+    pub shuffle: bool,
+    pub repeat: u8,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]

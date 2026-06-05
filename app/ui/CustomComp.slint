@@ -102,11 +102,15 @@ export component CustomSlider inherits Rectangle {
         height: self.has-hover ? 12px : 6px;
 
         pointer-event(event) => {
-            if (event.kind == PointerEventKind.down || event.kind == PointerEventKind.move) {
-                if (self.pressed) {
-                    root.pressed = true;
+            if (event.kind == PointerEventKind.down) {
+                root.pressed = true;
+                root.displayValue = root.minimum + (root.maximum - root.minimum) * clamp(self.mouse-x / root.width, 0, 1);
+                root.displayHoverValue = root.displayValue;
+            }
+            if (event.kind == PointerEventKind.move) {
+                if (root.pressed) {
                     root.displayValue = root.minimum + (root.maximum - root.minimum) * clamp(self.mouse-x / root.width, 0, 1);
-                    root.displayHoverValue = root.minimum + (root.maximum - root.minimum) * clamp(self.mouse-x / root.width, 0, 1);
+                    root.displayHoverValue = root.displayValue;
                 } else if (self.has-hover) {
                     root.displayHoverValue = root.minimum + (root.maximum - root.minimum) * clamp(self.mouse-x / root.width, 0, 1);
                 }
@@ -250,6 +254,7 @@ export component ComboBox {
 export component PlList inherits VerticalLayout {
     in property <[PlaylistMinimal]> items;
     callback item-clicked(string);
+    callback show-context-menu(string, string, length, length);
     Rectangle {
         border-radius: 10px;
         clip: true;
@@ -265,6 +270,11 @@ export component PlList inherits VerticalLayout {
                     background: touch.has-hover ? Theme.bgd3 : Theme.bgd2;
                     animate background { duration: 100ms; }
                     touch := TouchArea {
+                        pointer-event(event) => {
+                            if event.button == PointerEventButton.right && event.kind == PointerEventKind.down {
+                                show-context-menu(item.id, item.title, touch.absolute-position.x + touch.mouse-x, touch.absolute-position.y + touch.mouse-y);
+                            }
+                        }
                         clicked => {
                             item-clicked(item.id);
                         }
@@ -302,8 +312,10 @@ export component PlList inherits VerticalLayout {
 
 export component SongList inherits VerticalLayout {
     in property <[Song]> items;
+    in property <string> current-song-id: "";
     callback item-clicked(string);
     callback show-context-menu(string, length, length);
+    callback toggle-selection(string);
     Rectangle {
         border-radius: 10px;
         clip: true;
@@ -314,24 +326,60 @@ export component SongList inherits VerticalLayout {
                 spacing: 5px;
                 padding: 0px;
                 for item[i] in items: Rectangle {
+                    private property <bool> ctrl-pressed: false;
                     border-radius: 10px;
-                    background: touch.has-hover ? Theme.bgd3 : Theme.bgd2;
+                    background: item.selected ? Theme.bgd4 : (touch.has-hover ? Theme.bgd3 : Theme.bgd2);
                     animate background { duration: 100ms; }
+
+                    // Selection accent bar (left)
+                    Rectangle {
+                        x: 0px;
+                        y: 4px;
+                        width: 4px;
+                        height: parent.height - 8px;
+                        background: Theme.acct;
+                        border-radius: 2px;
+                        visible: item.selected;
+                    }
+
+                    // Currently-playing accent bar (right side of left edge, distinct position)
+                    Rectangle {
+                        x: item.selected ? 6px : 0px;
+                        y: 4px;
+                        width: 3px;
+                        height: parent.height - 8px;
+                        background: Theme.acct;
+                        border-radius: 2px;
+                        opacity: 0.6;
+                        visible: root.current-song-id != "" && item.id == root.current-song-id && !item.selected;
+                    }
+
                     touch := TouchArea {
-                        clicked => {
-                            item-clicked(item.id);
-                        }
                         pointer-event(event) => {
+                            if event.button == PointerEventButton.left && event.kind == PointerEventKind.down {
+                                ctrl-pressed = event.modifiers.control;
+                            }
                             if event.button == PointerEventButton.right && event.kind == PointerEventKind.down {
                                 show-context-menu(item.id, touch.absolute-position.x + touch.mouse-x, touch.absolute-position.y + touch.mouse-y);
                             }
+                        }
+                        clicked => {
+                            if ctrl-pressed {
+                                toggle-selection(item.id);
+                            } else {
+                                item-clicked(item.id);
+                            }
+                            ctrl-pressed = false;
                         }
                     }
 
                     HorizontalLayout {
                         padding: 5px;
-                        padding-right: 20px;
+                        padding-left: item.selected ? 12px : 5px;
+                        padding-right: 10px;
                         spacing: 10px;
+
+                        // Album art
                         Rectangle {
                             height: 50px;
                             width: 50px;
@@ -344,20 +392,76 @@ export component SongList inherits VerticalLayout {
                             }
                         }
 
-                        Text {
-                            text: item.title;
-                            color: Theme.txt1;
-                            font-size: 20px;
-                            vertical-alignment: center;
-                            horizontal-alignment: left;
+                        // Title + artists (grows)
+                        VerticalLayout {
+                            alignment: LayoutAlignment.center;
+                            spacing: 2px;
+                            Text {
+                                text: item.title;
+                                color: root.current-song-id != "" && item.id == root.current-song-id ? Theme.acct : Theme.txt1;
+                                font-size: 20px;
+                                vertical-alignment: center;
+                                horizontal-alignment: left;
+                                overflow: elide;
+                            }
+                            Text {
+                                text: item.artists;
+                                color: Theme.txt2;
+                                font-size: 15px;
+                                vertical-alignment: center;
+                                horizontal-alignment: left;
+                                overflow: elide;
+                            }
                         }
 
+                        // Duration (fixed width, right-aligned)
                         Text {
-                            text: item.artists;
+                            text: item.duration;
                             color: Theme.txt2;
-                            font-size: 15px;
+                            font-size: 14px;
                             vertical-alignment: center;
                             horizontal-alignment: right;
+                            width: 55px;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+export component ArtistList inherits VerticalLayout {
+    in property <[string]> items;
+    callback item-clicked(string);
+    Rectangle {
+        border-radius: 10px;
+        clip: true;
+        ScrollView {
+            content-height: 65px * items.length - 5px;
+            direction: -1;
+            box := VerticalBox {
+                spacing: 5px;
+                padding: 0px;
+                for item[i] in items: Rectangle {
+                    height: 60px;
+                    border-radius: 10px;
+                    background: touch.has-hover ? Theme.bgd3 : Theme.bgd2;
+                    animate background { duration: 100ms; }
+
+                    touch := TouchArea {
+                        clicked => {
+                            item-clicked(item);
+                        }
+                    }
+
+                    HorizontalLayout {
+                        padding: 15px;
+                        Text {
+                            text: item;
+                            color: Theme.txt1;
+                            font-size: 25px;
+                            vertical-alignment: center;
+                            horizontal-alignment: left;
                         }
                     }
                 }
@@ -368,6 +472,7 @@ export component SongList inherits VerticalLayout {
 
 export component MenuItem inherits Rectangle {
     in property <string> text;
+    in property <length> item-font-size: 16px;
     callback clicked;
     in-out property <bool> enabled: true;
 
@@ -391,20 +496,21 @@ export component MenuItem inherits Rectangle {
         Text {
             text: root.text;
             color: Theme.txt1;
-            font-size: 16px;
+            font-size: root.item-font-size;
             vertical-alignment: center;
             horizontal-alignment: left;
         }
     }
 }
 
-export component ContextMenu inherits Rectangle {
+export component PlContextMenu inherits Rectangle {
     in-out property <bool> menu-visible: false;
     in property <length> x-position: 0px;
     in property <length> y-position: 0px;
-    in property <string> song-id;
-    callback add-to-queue(string);
-    callback play-next(string);
+    in property <string> playlist-id;
+    in property <string> playlist-title;
+    callback rename-playlist(string, string);
+    callback delete-playlist(string);
 
     width: 200px;
     height: 90px;
@@ -415,16 +521,70 @@ export component ContextMenu inherits Rectangle {
     drop-shadow-color: Theme.bgd0;
     drop-shadow-blur: 10px;
     z: 1000;
-    clip: true;
-
     x: root.x-position;
     y: root.y-position;
     visible: root.menu-visible;
 
     VerticalLayout {
+        padding: 5px;
+        MenuItem {
+            text: "Rename";
+            width: 100%;
+            clicked => { root.rename-playlist(root.playlist-id, root.playlist-title); root.menu-visible = false; }
+        }
+        MenuItem {
+            text: "Delete Playlist";
+            width: 100%;
+            clicked => { root.delete-playlist(root.playlist-id); root.menu-visible = false; }
+        }
+    }
+}
+
+export component ContextMenu inherits Rectangle {
+    in-out property <bool> menu-visible: false;
+    in property <length> x-position: 0px;
+    in property <length> y-position: 0px;
+    in property <string> song-id;
+    in property <[PlaylistMinimal]> playlists;
+    in property <string> playlist-id: "";
+
+    private property <bool> show-playlist-submenu: false;
+    out property <length> total-height:
+        130px +
+        (playlist-id != "" ? 40px : 0px) +
+        (show-playlist-submenu ? playlists.length * 35px : 0px);
+
+    callback add-to-queue(string);
+    callback play-next(string);
+    callback add-to-playlist(string);
+    callback remove-song-from-playlist(string);
+
+    width: 200px;
+    height: root.total-height;
+    background: Theme.bgd2;
+    border-radius: 10px;
+    border-width: 1px;
+    border-color: Theme.bgd4;
+    drop-shadow-color: Theme.bgd0;
+    drop-shadow-blur: 10px;
+    z: 1000;
+    clip: true;
+
+    animate height { duration: 150ms; easing: ease-in-out-quad; }
+
+    x: root.x-position;
+    y: root.y-position;
+    visible: root.menu-visible;
+
+    changed menu-visible => {
+        if !root.menu-visible {
+            show-playlist-submenu = false;
+        }
+    }
+
+    VerticalLayout {
         spacing: 0px;
         padding: 5px;
-        height: 100%;
         width: 100%;
 
         MenuItem {
@@ -436,6 +596,41 @@ export component ContextMenu inherits Rectangle {
             text: "Add to Queue";
             width: 100%;
             clicked => { root.add-to-queue(root.song-id); root.menu-visible = false; }
+        }
+        MenuItem {
+            text: show-playlist-submenu ? "Add to Playlist ▲" : "Add to Playlist ▶";
+            width: 100%;
+            clicked => { show-playlist-submenu = !show-playlist-submenu; }
+        }
+
+        Rectangle {
+            width: parent.width - 10px;
+            height: show-playlist-submenu ? playlists.length * 35px : 0px;
+            clip: true;
+            animate height { duration: 150ms; easing: ease-in-out-quad; }
+            VerticalLayout {
+                spacing: 2px;
+                padding: 0px;
+                for pl in playlists: MenuItem {
+                    text: pl.title;
+                    item-font-size: 14px;
+                    height: 33px;
+                    width: parent.width;
+                    clicked => { root.add-to-playlist(pl.id); root.menu-visible = false; }
+                }
+            }
+        }
+
+        Rectangle {
+            width: parent.width;
+            height: playlist-id != "" ? 40px : 0px;
+            clip: true;
+            animate height { duration: 150ms; easing: ease-in-out-quad; }
+            MenuItem {
+                text: "Remove from Playlist";
+                width: 100%;
+                clicked => { root.remove-song-from-playlist(root.song-id); root.menu-visible = false; }
+            }
         }
     }
 }

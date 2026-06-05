@@ -65,6 +65,88 @@ pub async fn get_all_playlists() -> Result<Vec<PlaylistMinimal>> {
     Ok(result)
 }
 
+pub async fn rename_playlist(playlist_id: Uuid, new_title: String) -> Result<()> {
+    let playlists_dir = dirs::config_dir()
+        .unwrap_or_else(|| {
+            tracing::error!("No config dir.");
+            exit(1)
+        })
+        .join("aurora-player")
+        .join("playlists");
+
+    let file_path = playlists_dir.join(format!("{}.json", playlist_id));
+    let data = fs::read_to_string(&file_path).await?;
+    let mut playlist: Playlist = serde_json::from_str(&data)?;
+    playlist.title = new_title;
+    let data = serde_json::to_string_pretty(&playlist)?;
+    fs::write(&file_path, data).await?;
+    Ok(())
+}
+
+pub async fn delete_playlist(playlist_id: Uuid) -> Result<()> {
+    let playlists_dir = dirs::config_dir()
+        .unwrap_or_else(|| {
+            tracing::error!("No config dir.");
+            exit(1)
+        })
+        .join("aurora-player")
+        .join("playlists");
+
+    let file_path = playlists_dir.join(format!("{}.json", playlist_id));
+    fs::remove_file(&file_path).await?;
+    Ok(())
+}
+
+pub async fn remove_song_from_playlist(playlist_id: Uuid, song_id: Uuid) -> Result<()> {
+    let playlists_dir = dirs::config_dir()
+        .unwrap_or_else(|| {
+            tracing::error!("No config dir.");
+            exit(1)
+        })
+        .join("aurora-player")
+        .join("playlists");
+
+    let file_path = playlists_dir.join(format!("{}.json", playlist_id));
+    let data = fs::read_to_string(&file_path).await?;
+    let mut playlist: Playlist = serde_json::from_str(&data)?;
+    playlist.songs.retain(|s| s.id != song_id);
+    let data = serde_json::to_string_pretty(&playlist)?;
+    fs::write(&file_path, data).await?;
+    Ok(())
+}
+
+pub async fn add_songs_to_playlist(
+    state: &StateStruct,
+    playlist_id: Uuid,
+    song_ids: Vec<Uuid>,
+) -> Result<()> {
+    let playlists_dir = dirs::config_dir()
+        .unwrap_or_else(|| {
+            tracing::error!("No config dir.");
+            exit(1)
+        })
+        .join("aurora-player")
+        .join("playlists");
+
+    tokio::fs::create_dir_all(&playlists_dir).await?;
+
+    let file_path = playlists_dir.join(format!("{}.json", playlist_id));
+    let data = fs::read_to_string(&file_path).await?;
+    let mut playlist: Playlist = serde_json::from_str(&data)?;
+
+    for song_id in &song_ids {
+        if !playlist.songs.iter().any(|s| s.id == *song_id) {
+            if let Some(song_meta) = state.index.get(song_id) {
+                playlist.songs.push(Song::from(song_meta));
+            }
+        }
+    }
+
+    let data = serde_json::to_string_pretty(&playlist)?;
+    fs::write(&file_path, data).await?;
+    Ok(())
+}
+
 pub async fn create_playlist(inp: PlaylistIn) -> Result<String> {
     let playlists_dir = dirs::config_dir()
         .unwrap_or_else(|| {

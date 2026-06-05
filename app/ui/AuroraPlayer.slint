@@ -1,5 +1,5 @@
 import { QueueView } from "QueueView.slint";
-import { ContextMenu } from "CustomComp.slint";
+import { ContextMenu, PlContextMenu } from "CustomComp.slint";
 import { TabSelectorView } from "TabSelectorView.slint";
 import { MainView } from "MainView.slint";
 import { NowPlayingView } from "NowPlayingView.slint";
@@ -33,6 +33,17 @@ export component AuroraPlayer inherits Window {
     callback select-playlist(string);
     callback replace-queue(Playlist);
     callback show-context-menu(string, length, length);
+    callback create-playlist(string);
+    callback add-songs-to-playlist(string, string);
+    callback remove-song-from-playlist(string, string);
+    callback delete-playlist(string);
+    callback rename-playlist(string, string);
+    callback toggle-song-selection(string);
+    callback set-shuffle(bool);
+    callback set-repeat(int);
+    callback set-volume(float);
+    callback get-artist-list();
+    callback get-songs-by-artist(string);
 
     in-out property <string> Title: "Nothing Playing";
     in-out property <string> Artists: "No artist";
@@ -41,6 +52,13 @@ export component AuroraPlayer inherits Window {
     in-out property <bool> is_paused: true;
     in-out property <int> duration: 0;
 
+    in-out property <bool> shuffle: false;
+    in-out property <int> repeat-mode: 0;
+    in-out property <float> volume: 1.0;
+    in-out property <[string]> artist-list;
+    in-out property <[Song]> artist-songs;
+    in-out property <string> current-playing-id: "";
+
     in-out property <[Song]> queue;
     in-out property <[Song]> searchResults;
     in-out property <[PlaylistMinimal]> playlistsList;
@@ -48,7 +66,7 @@ export component AuroraPlayer inherits Window {
         title: "Playlist Test",
         id:"id",
         songs: [
-            { album-art:  @image-url("../assets/placeholder.png"), title: "Song", artists: "Artist" }
+            { album-art:  @image-url("../assets/placeholder.png"), title: "Song", artists: "Artist", duration: "" }
         ]
     };
 
@@ -57,6 +75,12 @@ export component AuroraPlayer inherits Window {
     in-out property <length> context-menu-x: 0px;
     in-out property <length> context-menu-y: 0px;
     in-out property <string> context-menu-song-id: "";
+
+    in-out property <bool> pl-context-menu-visible: false;
+    in-out property <length> pl-context-menu-x: 0px;
+    in-out property <length> pl-context-menu-y: 0px;
+    in-out property <string> pl-context-menu-playlist-id: "";
+    in-out property <string> pl-context-menu-playlist-title: "";
 
     title: "Aurora Player";
 
@@ -67,14 +91,36 @@ export component AuroraPlayer inherits Window {
 
     default-font-family: "Noto Sans JP";
 
+    // Playlist context menu (for right-clicking playlist items in the list)
+    pl-context-menu := PlContextMenu {
+        menu-visible <=> root.pl-context-menu-visible;
+        x-position <=> root.pl-context-menu-x;
+        y-position <=> root.pl-context-menu-y;
+        playlist-id <=> root.pl-context-menu-playlist-id;
+        playlist-title <=> root.pl-context-menu-playlist-title;
+        delete-playlist(id) => { root.delete-playlist(id); }
+        rename-playlist(id, title) => {
+            main-view.renaming-playlist-id = id;
+            main-view.new-playlist-name = title;
+        }
+    }
+
     // Context menu instance
     context-menu := ContextMenu {
         menu-visible <=> root.context-menu-visible;
         x-position <=> root.context-menu-x;
         y-position <=> root.context-menu-y;
         song-id <=> root.context-menu-song-id;
+        playlists: root.playlistsList;
+        playlist-id: main-view.in-playlist ? root.playlistResult.id : "";
         play-next(id) => { root.play-next(id); }
         add-to-queue(id) => { root.enqueue(id); }
+        add-to-playlist(playlist-id) => {
+            root.add-songs-to-playlist(playlist-id, root.context-menu-song-id);
+        }
+        remove-song-from-playlist(song-id) => {
+            root.remove-song-from-playlist(root.playlistResult.id, song-id);
+        }
     }
 
     Rectangle {
@@ -118,13 +164,19 @@ export component AuroraPlayer inherits Window {
                     refresh-playlists => {
                         refresh-playlists()
                     }
+                    refresh-artists => {
+                        root.get-artist-list()
+                    }
                 }
 
-                MainView {
+                main-view := MainView {
                     active-view: root.active-view;
                     searchResults: root.searchResults;
                     current-playlist: root.playlistResult;
                     playlists: root.playlistsList;
+                    artists: root.artist-list;
+                    artist-songs: root.artist-songs;
+                    current-song-id: root.current-playing-id;
                     query-submit(q, m, f) => {
                         search(q, m, f);
                     }
@@ -143,6 +195,25 @@ export component AuroraPlayer inherits Window {
                         root.context-menu-y = y;
                         root.context-menu-visible = true;
                     }
+                    show-playlist-context-menu(id, title, x, y) => {
+                        root.pl-context-menu-playlist-id = id;
+                        root.pl-context-menu-playlist-title = title;
+                        root.pl-context-menu-x = x;
+                        root.pl-context-menu-y = y;
+                        root.pl-context-menu-visible = true;
+                    }
+                    create-playlist(name) => {
+                        root.create-playlist(name);
+                    }
+                    rename-playlist(id, name) => {
+                        root.rename-playlist(id, name);
+                    }
+                    toggle-song-selection(id) => {
+                        root.toggle-song-selection(id);
+                    }
+                    get-songs-by-artist(name) => {
+                        root.get-songs-by-artist(name);
+                    }
                 }
 
                 PlayerView {
@@ -158,21 +229,40 @@ export component AuroraPlayer inherits Window {
                     seek(value) => {
                         seek(value);
                     }
+                    set-shuffle(b) => {
+                        root.set-shuffle(b);
+                    }
+                    set-repeat(r) => {
+                        root.set-repeat(r);
+                    }
+                    set-volume(v) => {
+                        root.set-volume(v);
+                    }
                     value <=> position;
                     duration: root.duration;
                     is-paused: root.is_paused;
+                    shuffle <=> root.shuffle;
+                    repeat <=> root.repeat-mode;
+                    volume <=> root.volume;
                 }
             }
         }
         dismiss-area := TouchArea {
             width: 100%;
             height: 100%;
-            enabled: root.context-menu-visible;
+            enabled: root.context-menu-visible || root.pl-context-menu-visible;
             clicked => {
-                // Only dismiss if click is outside the context menu
-                if (self.mouse-x < root.context-menu-x || self.mouse-x > root.context-menu-x + 200px ||
-                    self.mouse-y < root.context-menu-y || self.mouse-y > root.context-menu-y + 130px) {
-                    root.context-menu-visible = false;
+                if root.context-menu-visible {
+                    if (self.mouse-x < root.context-menu-x || self.mouse-x > root.context-menu-x + 200px ||
+                        self.mouse-y < root.context-menu-y || self.mouse-y > root.context-menu-y + context-menu.total-height) {
+                        root.context-menu-visible = false;
+                    }
+                }
+                if root.pl-context-menu-visible {
+                    if (self.mouse-x < root.pl-context-menu-x || self.mouse-x > root.pl-context-menu-x + 200px ||
+                        self.mouse-y < root.pl-context-menu-y || self.mouse-y > root.pl-context-menu-y + 90px) {
+                        root.pl-context-menu-visible = false;
+                    }
                 }
             }
         }

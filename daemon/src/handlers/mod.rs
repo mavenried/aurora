@@ -20,6 +20,7 @@ mod remove_song_at;
 mod replace_queue;
 mod search;
 mod seek;
+mod settings;
 mod status;
 
 async fn read_request(read: &mut OwnedReadHalf) -> anyhow::Result<Request> {
@@ -84,7 +85,20 @@ pub async fn handle_client(
             }
             Request::RemoveSong(id) => remove_song::remove_song(&state, id).await,
             Request::RemoveSongAt(index) => remove_song_at::remove_song_at(&state, index).await,
-            Request::PlaylistDelete(id) => Ok(()),
+            Request::PlaylistDelete(id) => playlist::playlist_delete(&writer, id).await,
+            Request::PlaylistAddSongs { playlist_id, song_ids } => {
+                playlist::playlist_add_songs(&writer, &state, playlist_id, song_ids).await
+            }
+            Request::PlaylistRemoveSong { playlist_id, song_id } => {
+                playlist::playlist_remove_song(&writer, &state, playlist_id, song_id).await
+            }
+            Request::PlaylistRename { playlist_id, new_title } => {
+                playlist::playlist_rename(&writer, playlist_id, new_title).await
+            }
+            Request::SetVolume(v) => settings::set_volume(&writer, &state, v).await,
+            Request::SetShuffle(b) => settings::set_shuffle(&writer, &state, b).await,
+            Request::SetRepeat(r) => settings::set_repeat(&writer, &state, r).await,
+            Request::GetArtistList => settings::get_artist_list(&writer, &state).await,
         } {
             tracing::error!("Err: {err}");
         }
