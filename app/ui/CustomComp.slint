@@ -3,8 +3,8 @@ import { Song, PlaylistMinimal, Theme } from "Types.slint";
 
 export component ScrollView inherits Rectangle {
     in property <length> content-height;
-
     in property <int> direction: 1;
+    out property <length> viewport-y <=> touch.viewport-y;
 
     clip: true;
 
@@ -19,7 +19,6 @@ export component ScrollView inherits Rectangle {
         property <length> viewport-y;
         scroll-event(event) => {
             viewport-y = min(0px, max(-(content-height - parent.height), viewport-y - (root.direction * event.delta-y)));
-
             return accept;
         }
 
@@ -40,7 +39,7 @@ export component CustomSlider inherits Rectangle {
     in property <int> maximum: 100;
 
     in-out property <int> value: 0;
-    in-out property <int> displayValue: 0;
+    in-out property <int> displayValue: value;
     in-out property <int> displayHoverValue: 0;
 
     in property <int> step: 10000;
@@ -122,42 +121,7 @@ export component CustomSlider inherits Rectangle {
         }
     }
 
-    /*
-    focus-scope := FocusScope {
-        enabled: root.enabled;
-
-        key-pressed(event) => {
-            if (event.text == Key.LeftArrow) {
-                root.displayValue = max(root.minimum, root.displayValue - root.step);
-                root.released(root.displayValue);
-                return accept;
-            }
-            if (event.text == Key.RightArrow) {
-                root.displayValue = min(root.maximum, root.displayValue + root.step);
-                root.released(root.displayValue);
-                return accept;
-            }
-            if (event.text == Key.Home) {
-                root.displayValue = root.minimum;
-                root.released(root.displayValue);
-                return accept;
-            }
-            if (event.text == Key.End) {
-                root.displayValue = root.maximum;
-                root.released(root.displayValue);
-                return accept;
-            }
-            return reject;
-        }
-
-        key-released(event) => {
-            if (event.text == Key.LeftArrow || event.text == Key.RightArrow || event.text == Key.Home || event.text == Key.End) {
-                return accept;
-            }
-            return reject;
-        }
-    }
-    */
+    
 }
 
 export component ComboBox {
@@ -331,7 +295,6 @@ export component SongList inherits VerticalLayout {
                     background: item.selected ? Theme.bgd4 : (touch.has-hover ? Theme.bgd3 : Theme.bgd2);
                     animate background { duration: 100ms; }
 
-                    // Selection accent bar (left)
                     Rectangle {
                         x: 0px;
                         y: 4px;
@@ -342,7 +305,6 @@ export component SongList inherits VerticalLayout {
                         visible: item.selected;
                     }
 
-                    // Currently-playing accent bar (right side of left edge, distinct position)
                     Rectangle {
                         x: item.selected ? 6px : 0px;
                         y: 4px;
@@ -379,7 +341,6 @@ export component SongList inherits VerticalLayout {
                         padding-right: 10px;
                         spacing: 10px;
 
-                        // Album art
                         Rectangle {
                             height: 50px;
                             width: 50px;
@@ -392,7 +353,6 @@ export component SongList inherits VerticalLayout {
                             }
                         }
 
-                        // Title + artists (grows)
                         VerticalLayout {
                             alignment: LayoutAlignment.center;
                             spacing: 2px;
@@ -414,7 +374,6 @@ export component SongList inherits VerticalLayout {
                             }
                         }
 
-                        // Duration (fixed width, right-aligned)
                         Text {
                             text: item.duration;
                             color: Theme.txt2;
@@ -503,17 +462,12 @@ export component MenuItem inherits Rectangle {
     }
 }
 
-export component PlContextMenu inherits Rectangle {
+component ContextMenuBase inherits Rectangle {
     in-out property <bool> menu-visible: false;
     in property <length> x-position: 0px;
     in property <length> y-position: 0px;
-    in property <string> playlist-id;
-    in property <string> playlist-title;
-    callback rename-playlist(string, string);
-    callback delete-playlist(string);
 
     width: 200px;
-    height: 90px;
     background: Theme.bgd2;
     border-radius: 10px;
     border-width: 1px;
@@ -524,6 +478,15 @@ export component PlContextMenu inherits Rectangle {
     x: root.x-position;
     y: root.y-position;
     visible: root.menu-visible;
+}
+
+export component PlContextMenu inherits ContextMenuBase {
+    in property <string> playlist-id;
+    in property <string> playlist-title;
+    callback rename-playlist(string, string);
+    callback delete-playlist(string);
+
+    height: 90px;
 
     VerticalLayout {
         padding: 5px;
@@ -540,10 +503,30 @@ export component PlContextMenu inherits Rectangle {
     }
 }
 
-export component ContextMenu inherits Rectangle {
-    in-out property <bool> menu-visible: false;
-    in property <length> x-position: 0px;
-    in property <length> y-position: 0px;
+export component QueueContextMenu inherits ContextMenuBase {
+    in-out property <int> queue-idx: -1;
+    callback move-to-front(int);
+    callback remove-from-queue(int);
+
+    width: 160px;
+    height: 90px;
+
+    VerticalLayout {
+        padding: 5px;
+        MenuItem {
+            text: "Move to Front";
+            width: 100%;
+            clicked => { root.move-to-front(root.queue-idx); root.menu-visible = false; }
+        }
+        MenuItem {
+            text: "Remove";
+            width: 100%;
+            clicked => { root.remove-from-queue(root.queue-idx); root.menu-visible = false; }
+        }
+    }
+}
+
+export component ContextMenu inherits ContextMenuBase {
     in property <string> song-id;
     in property <[PlaylistMinimal]> playlists;
     in property <string> playlist-id: "";
@@ -559,22 +542,9 @@ export component ContextMenu inherits Rectangle {
     callback add-to-playlist(string);
     callback remove-song-from-playlist(string);
 
-    width: 200px;
     height: root.total-height;
-    background: Theme.bgd2;
-    border-radius: 10px;
-    border-width: 1px;
-    border-color: Theme.bgd4;
-    drop-shadow-color: Theme.bgd0;
-    drop-shadow-blur: 10px;
-    z: 1000;
     clip: true;
-
     animate height { duration: 150ms; easing: ease-in-out-quad; }
-
-    x: root.x-position;
-    y: root.y-position;
-    visible: root.menu-visible;
 
     changed menu-visible => {
         if !root.menu-visible {

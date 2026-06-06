@@ -1,5 +1,5 @@
 import { QueueView } from "QueueView.slint";
-import { ContextMenu, PlContextMenu } from "CustomComp.slint";
+import { ContextMenu, PlContextMenu, QueueContextMenu } from "CustomComp.slint";
 import { TabSelectorView } from "TabSelectorView.slint";
 import { MainView } from "MainView.slint";
 import { NowPlayingView } from "NowPlayingView.slint";
@@ -21,6 +21,7 @@ export component AuroraPlayer inherits Window {
     callback queue-click(int);
     callback queue-remove(int);
     callback queue-clear();
+    callback queue-move(int, int);
     callback prev();
     callback pause();
     callback next();
@@ -82,16 +83,18 @@ export component AuroraPlayer inherits Window {
     in-out property <string> pl-context-menu-playlist-id: "";
     in-out property <string> pl-context-menu-playlist-title: "";
 
-    title: "Aurora Player";
+    in-out property <bool> queue-ctx-visible: false;
+    in-out property <length> queue-ctx-x: 0px;
+    in-out property <length> queue-ctx-y: 0px;
+    in-out property <int> queue-ctx-idx: -1;
 
+    title: "Aurora Player";
     min-height: 650px;
     min-width: 1155px;
     preferred-height: 800px;
     preferred-width: 1422px;
-
     default-font-family: "Noto Sans JP";
 
-    // Playlist context menu (for right-clicking playlist items in the list)
     pl-context-menu := PlContextMenu {
         menu-visible <=> root.pl-context-menu-visible;
         x-position <=> root.pl-context-menu-x;
@@ -105,7 +108,6 @@ export component AuroraPlayer inherits Window {
         }
     }
 
-    // Context menu instance
     context-menu := ContextMenu {
         menu-visible <=> root.context-menu-visible;
         x-position <=> root.context-menu-x;
@@ -123,6 +125,15 @@ export component AuroraPlayer inherits Window {
         }
     }
 
+    queue-ctx-menu := QueueContextMenu {
+        menu-visible <=> root.queue-ctx-visible;
+        x-position <=> root.queue-ctx-x;
+        y-position <=> root.queue-ctx-y;
+        queue-idx <=> root.queue-ctx-idx;
+        move-to-front(idx) => { root.queue-move(idx, 0); }
+        remove-from-queue(idx) => { root.queue-remove(idx + 1); }
+    }
+
     Rectangle {
         background: Theme.bgd0;
         HorizontalLayout {
@@ -133,15 +144,16 @@ export component AuroraPlayer inherits Window {
 
                 QueueView {
                     queue: root.queue;
-                    queue-click(n) => {
-                        root.queue-click(n)
+                    queue-click(n) => { root.queue-click(n) }
+                    queue-remove(n) => { root.queue-remove(n) }
+                    queue-clear => { root.queue-clear() }
+                    queue-move(from, to) => { root.queue-move(from, to) }
+                    show-queue-context-menu(idx, x, y) => {
+                        root.queue-ctx-idx = idx;
+                        root.queue-ctx-x = x;
+                        root.queue-ctx-y = y;
+                        root.queue-ctx-visible = true;
                     }
-                    queue-remove(n) => {
-                        root.queue-remove(n)
-                    }
-                    queue-clear => {
-                        root.queue-clear()
-                    };
                 }
 
                 VerticalLayout {
@@ -149,7 +161,6 @@ export component AuroraPlayer inherits Window {
                         Title: root.Title;
                         Artists: root.Artists;
                         AlbumArt: root.AlbumArt;
-
                         width: 400px;
                         height: 100px;
                     }
@@ -161,12 +172,8 @@ export component AuroraPlayer inherits Window {
 
                 TabSelectorView {
                     active-view <=> root.active-view;
-                    refresh-playlists => {
-                        refresh-playlists()
-                    }
-                    refresh-artists => {
-                        root.get-artist-list()
-                    }
+                    refresh-playlists => { refresh-playlists() }
+                    refresh-artists => { root.get-artist-list() }
                 }
 
                 main-view := MainView {
@@ -177,18 +184,10 @@ export component AuroraPlayer inherits Window {
                     artists: root.artist-list;
                     artist-songs: root.artist-songs;
                     current-song-id: root.current-playing-id;
-                    query-submit(q, m, f) => {
-                        search(q, m, f);
-                    }
-                    add(s) => {
-                        root.add(s);
-                    }
-                    get-playlist(s) => {
-                        select-playlist(s)
-                    }
-                    replace-queue(pl) => {
-                        root.replace-queue(pl)
-                    }
+                    query-submit(q, m, f) => { search(q, m, f); }
+                    add(s) => { root.add(s); }
+                    get-playlist(s) => { select-playlist(s) }
+                    replace-queue(pl) => { root.replace-queue(pl) }
                     show-context-menu(id, x, y) => {
                         root.context-menu-song-id = id;
                         root.context-menu-x = x;
@@ -202,42 +201,20 @@ export component AuroraPlayer inherits Window {
                         root.pl-context-menu-y = y;
                         root.pl-context-menu-visible = true;
                     }
-                    create-playlist(name) => {
-                        root.create-playlist(name);
-                    }
-                    rename-playlist(id, name) => {
-                        root.rename-playlist(id, name);
-                    }
-                    toggle-song-selection(id) => {
-                        root.toggle-song-selection(id);
-                    }
-                    get-songs-by-artist(name) => {
-                        root.get-songs-by-artist(name);
-                    }
+                    create-playlist(name) => { root.create-playlist(name); }
+                    rename-playlist(id, name) => { root.rename-playlist(id, name); }
+                    toggle-song-selection(id) => { root.toggle-song-selection(id); }
+                    get-songs-by-artist(name) => { root.get-songs-by-artist(name); }
                 }
 
                 PlayerView {
-                    pause => {
-                        root.pause()
-                    }
-                    next => {
-                        root.next()
-                    }
-                    prev => {
-                        root.prev()
-                    }
-                    seek(value) => {
-                        seek(value);
-                    }
-                    set-shuffle(b) => {
-                        root.set-shuffle(b);
-                    }
-                    set-repeat(r) => {
-                        root.set-repeat(r);
-                    }
-                    set-volume(v) => {
-                        root.set-volume(v);
-                    }
+                    pause => { root.pause() }
+                    next => { root.next() }
+                    prev => { root.prev() }
+                    seek(value) => { seek(value); }
+                    set-shuffle(b) => { root.set-shuffle(b); }
+                    set-repeat(r) => { root.set-repeat(r); }
+                    set-volume(v) => { root.set-volume(v); }
                     value <=> position;
                     duration: root.duration;
                     is-paused: root.is_paused;
@@ -250,7 +227,7 @@ export component AuroraPlayer inherits Window {
         dismiss-area := TouchArea {
             width: 100%;
             height: 100%;
-            enabled: root.context-menu-visible || root.pl-context-menu-visible;
+            enabled: root.context-menu-visible || root.pl-context-menu-visible || root.queue-ctx-visible;
             clicked => {
                 if root.context-menu-visible {
                     if (self.mouse-x < root.context-menu-x || self.mouse-x > root.context-menu-x + 200px ||
@@ -262,6 +239,12 @@ export component AuroraPlayer inherits Window {
                     if (self.mouse-x < root.pl-context-menu-x || self.mouse-x > root.pl-context-menu-x + 200px ||
                         self.mouse-y < root.pl-context-menu-y || self.mouse-y > root.pl-context-menu-y + 90px) {
                         root.pl-context-menu-visible = false;
+                    }
+                }
+                if root.queue-ctx-visible {
+                    if (self.mouse-x < root.queue-ctx-x || self.mouse-x > root.queue-ctx-x + 160px ||
+                        self.mouse-y < root.queue-ctx-y || self.mouse-y > root.queue-ctx-y + 90px) {
+                        root.queue-ctx-visible = false;
                     }
                 }
             }

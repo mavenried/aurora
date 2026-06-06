@@ -2,12 +2,17 @@ import { NowPlayingView } from "NowPlayingView.slint";
 import { Song, Theme } from "Types.slint";
 import { ScrollView } from "CustomComp.slint";
 
-
 export component QueueView inherits Rectangle {
     in property <[Song]> queue;
     callback queue-click(int);
     callback queue-remove(int);
     callback queue-clear();
+    callback queue-move(int, int);
+    callback show-queue-context-menu(int, length, length);
+
+    private property <int> drag-idx: -1;
+    private property <int> drop-target: -1;
+    private property <length> drag-start-y: 0px;
 
     width: 400px;
     background: Theme.bgd1;
@@ -18,37 +23,21 @@ export component QueueView inherits Rectangle {
         HorizontalLayout {
             padding: 5px;
             alignment: LayoutAlignment.space-between;
-
             Rectangle {
                 width: 60px;
                 height: 30px;
-                background: Theme.bgd1;
-                border-radius: 10px;
-
-                Text {
-                    text: "Queue";
-                    color: Theme.txt1;
-                    font-size: 15px;
-                }
+                Text { text: "Queue"; color: Theme.txt1; font-size: 15px; }
             }
-
             Rectangle {
                 width: 60px;
                 height: 30px;
-                background: button.has-hover ? Theme.bgd3 : Theme.bgd1;
+                background: clear-ta.has-hover ? Theme.bgd3 : Theme.bgd1;
                 animate background { duration: 100ms; }
                 border-radius: 10px;
-                button := TouchArea {
-                    clicked => {
-                        root.queue-clear();
-                    }
+                clear-ta := TouchArea {
+                    clicked => { root.queue-clear(); }
                 }
-
-                Text {
-                    text: "Clear";
-                    color: Theme.txt1;
-                    font-size: 15px;
-                }
+                Text { text: "Clear"; color: Theme.txt1; font-size: 15px; }
             }
         }
 
@@ -57,23 +46,81 @@ export component QueueView inherits Rectangle {
             transform-rotation: 180deg;
             background: Theme.bgd2;
 
-            for item[i] in queue: NowPlayingView {
+            for item[i] in queue: Rectangle {
                 transform-rotation: 180deg;
-                Artists: item.artists;
-                AlbumArt: item.album_art;
-                Title: item.title;
-                border-radius: 0px;
-                background: touch.has-hover ? Theme.bgd3 : Theme.bgd2;
-                animate background { duration: 200ms; }
-                touch := TouchArea {
-                    width: parent.width;
-                    height: parent.height;
-                            //scroll.viewport-y = 0;
+                height: 100px;
+                width: parent.width;
+
+                Rectangle {
+                    y: parent.height - 3px;
+                    height: (root.drop-target == i && root.drag-idx != -1 && root.drag-idx != i) ? 3px : 0px;
+                    background: Theme.acct;
+                    animate height { duration: 60ms; }
+                }
+
+                NowPlayingView {
+                    x: 40px;
+                    width: parent.width - 40px;
+                    height: 100px;
+                    Artists: item.artists;
+                    AlbumArt: item.album_art;
+                    Title: item.title;
+                    border-radius: 0px;
+                    opacity: root.drag-idx == i ? 0.3 : 1.0;
+                    background: item-ta.has-hover ? Theme.bgd3 : Theme.bgd2;
+                    animate opacity { duration: 100ms; }
+                    animate background { duration: 200ms; }
+
+                    item-ta := TouchArea {
+                        width: parent.width;
+                        height: parent.height;
                         pointer-event(event) => {
-                        if event.button == PointerEventButton.right && event.kind == PointerEventKind.down {
-                            queue-remove(i+1);
-                        } else if event.button == PointerEventButton.left && event.kind == PointerEventKind.down {
-                            queue-click(i+1);
+                            if event.button == PointerEventButton.right && event.kind == PointerEventKind.up {
+                                show-queue-context-menu(i, item-ta.absolute-position.x + item-ta.mouse-x, item-ta.absolute-position.y + item-ta.mouse-y);
+                            } else if event.button == PointerEventButton.left && event.kind == PointerEventKind.down {
+                                queue-click(i + 1);
+                            }
+                        }
+                    }
+                }
+
+                drag-zone := Rectangle {
+                    x: 0;
+                    y: 0;
+                    width: 40px;
+                    height: 100px;
+                    background: drag-ta.has-hover ? Theme.bgd3 : transparent;
+                    animate background { duration: 100ms; }
+
+                    Text {
+                        text: "\u{2807}";
+                        color: root.drag-idx == i ? Theme.acct : Theme.txt2;
+                        font-size: 20px;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+
+                    drag-ta := TouchArea {
+                        pointer-event(event) => {
+                            if event.kind == PointerEventKind.down {
+                                root.drag-idx = i;
+                                root.drag-start-y = self.mouse-y;
+                                root.drop-target = i;
+                            }
+                            if event.kind == PointerEventKind.move && root.drag-idx == i {
+                                root.drop-target = clamp(
+                                    root.drag-idx - round((self.mouse-y - root.drag-start-y) / 100px),
+                                    0,
+                                    root.queue.length - 1
+                                );
+                            }
+                            if event.kind == PointerEventKind.up {
+                                if root.drag-idx != -1 && root.drop-target != root.drag-idx {
+                                    queue-move(root.drag-idx, root.drop-target);
+                                }
+                                root.drag-idx = -1;
+                                root.drop-target = -1;
+                            }
                         }
                     }
                 }

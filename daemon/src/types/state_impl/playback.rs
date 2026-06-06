@@ -33,18 +33,16 @@ impl StateStruct {
             return GetReturn::QueueEmpty;
         }
 
-        // Repeat-one: don't advance, just replay current song
         if self.repeat == 1 {
             self.current_song.replace(self.queue[0].clone());
             tracing::info!("Next (repeat-one)");
             return GetReturn::Ok;
         }
 
-        // Shuffle: move current song to back, then randomly pick the next one
         if self.shuffle && self.queue.len() > 1 {
             let song = self.queue.pop_front().unwrap();
             self.queue.push_back(song);
-            // Pick from everything except the song we just sent to back
+
             let idx = rand::thread_rng().gen_range(0..self.queue.len() - 1);
             self.queue.swap(0, idx);
             self.current_song.replace(self.queue[0].clone());
@@ -52,7 +50,6 @@ impl StateStruct {
             return GetReturn::Ok;
         }
 
-        // Normal advance
         for _ in 0..n {
             let song = self.queue.pop_front().unwrap();
             self.queue.push_back(song);

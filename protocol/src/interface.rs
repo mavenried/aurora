@@ -23,6 +23,7 @@ pub enum Request {
     ReplaceQueue(Vec<Uuid>),
     RemoveSong(Uuid),
     RemoveSongAt(usize),
+    MoveQueue { from: usize, to: usize },
     SetVolume(f32),
     SetShuffle(bool),
     SetRepeat(u8),
@@ -38,5 +39,6 @@ pub enum Response {
     PlaylistList(Vec<PlaylistMinimal>),
     Queue(Vec<Song>),
     Theme(Theme),
+    Volume(f32),
     ArtistList(Vec<String>),
 }

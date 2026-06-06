@@ -11,6 +11,7 @@ use crate::{
 
 mod clear;
 mod enqueue;
+mod move_queue;
 mod enqueue_at;
 pub mod next_prev;
 mod pause;
@@ -51,6 +52,9 @@ pub async fn handle_client(
 
             let _ =
                 send_to_client(&writer, &Response::Theme(state.lock().await.theme.clone())).await;
+
+            let _ =
+                send_to_client(&writer, &Response::Volume(state.lock().await.volume)).await;
             loop {
                 std::thread::sleep(Duration::from_millis(200));
                 if status(&writer, &state).await.is_err() {
@@ -85,6 +89,7 @@ pub async fn handle_client(
             }
             Request::RemoveSong(id) => remove_song::remove_song(&state, id).await,
             Request::RemoveSongAt(index) => remove_song_at::remove_song_at(&state, index).await,
+            Request::MoveQueue { from, to } => move_queue::move_queue(&state, from, to).await,
             Request::PlaylistDelete(id) => playlist::playlist_delete(&writer, id).await,
             Request::PlaylistAddSongs { playlist_id, song_ids } => {
                 playlist::playlist_add_songs(&writer, &state, playlist_id, song_ids).await

@@ -18,7 +18,7 @@ export component LibraryView inherits VerticalBox {
     spacing: 5px;
 
     Rectangle {
-        // Artist list (visible when not in-artist)
+
         ArtistList {
             states [
                 visible when !in-artist: {
@@ -44,7 +44,6 @@ export component LibraryView inherits VerticalBox {
             }
         }
 
-        // Artist detail view (visible when in-artist)
         VerticalLayout {
             states [
                 visible when in-artist: {
@@ -65,7 +64,6 @@ export component LibraryView inherits VerticalBox {
             spacing: 10px;
             padding: 0px;
 
-            // Header row: back button + artist name
             HorizontalLayout {
                 padding: 0px;
                 height: 60px;

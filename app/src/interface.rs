@@ -73,7 +73,7 @@ async fn unix_recver(
             Response::Status(status) => {
                 let mut state_locked = state.lock().await;
                 let default_art = state_locked.default_art_buffer.clone();
-                // Track current song id
+
                 let current_id = status
                     .current_song
                     .as_ref()
@@ -203,6 +203,11 @@ async fn unix_recver(
                         .set_bgd4(hex_to_u8(theme.bgd4));
                 });
             }
+            Response::Volume(volume) => {
+                let _ = app.upgrade_in_event_loop(move |aurora| {
+                    aurora.set_volume(volume);
+                });
+            }
             Response::ArtistList(list) => {
                 tracing::info!("Received: ArtistList, len:{}", list.len());
                 let mut state_locked = state.lock().await;
@@ -300,6 +305,15 @@ pub async fn interface(app: slint::Weak<AuroraPlayer>) -> anyhow::Result<()> {
             let state = state.clone();
             tokio::spawn(async move {
                 let req = Request::RemoveSongAt(n as usize);
+                let _ = state.lock().await.writer_tx.send(req).await;
+            });
+        });
+
+        let state = state_clone.clone();
+        aurora.on_queue_move(move |from, to| {
+            let state = state.clone();
+            tokio::spawn(async move {
+                let req = Request::MoveQueue { from: from as usize, to: to as usize };
                 let _ = state.lock().await.writer_tx.send(req).await;
             });
         });
@@ -414,7 +428,7 @@ pub async fn interface(app: slint::Weak<AuroraPlayer>) -> anyhow::Result<()> {
             tokio::spawn(async move {
                 let state = state.lock().await;
                 let _ = state.writer_tx.send(Request::Clear).await;
-                // let _ = state.writer_tx.send(Request::Play(songs[0])).await;
+
                 let _ = state.writer_tx.send(Request::ReplaceQueue(songs)).await;
             });
         });

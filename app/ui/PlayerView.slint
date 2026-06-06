@@ -36,12 +36,10 @@ export component PlayerView inherits Rectangle {
         padding: 5px;
         spacing: 0px;
 
-        // Controls row
         HorizontalLayout {
             padding: 6px;
             spacing: 0px;
 
-            // Left: current time
             VerticalLayout {
                 width: 80px;
                 alignment: LayoutAlignment.center;
@@ -54,7 +52,6 @@ export component PlayerView inherits Rectangle {
                 }
             }
 
-            // Center: shuffle + prev + play + next + repeat
             VerticalLayout {
                 horizontal-stretch: 1;
                 alignment: LayoutAlignment.center;
@@ -62,7 +59,6 @@ export component PlayerView inherits Rectangle {
                     alignment: LayoutAlignment.center;
                     spacing: 8px;
 
-                    // Shuffle button
                     Rectangle {
                         width: 36px;
                         height: 36px;
@@ -89,7 +85,6 @@ export component PlayerView inherits Rectangle {
                         }
                     }
 
-                    // Prev button
                     Rectangle {
                         width: 40px;
                         height: 40px;
@@ -112,7 +107,6 @@ export component PlayerView inherits Rectangle {
                         }
                     }
 
-                    // Play/Pause button
                     Rectangle {
                         width: 40px;
                         height: 40px;
@@ -135,7 +129,6 @@ export component PlayerView inherits Rectangle {
                         }
                     }
 
-                    // Next button
                     Rectangle {
                         width: 40px;
                         height: 40px;
@@ -158,7 +151,6 @@ export component PlayerView inherits Rectangle {
                         }
                     }
 
-                    // Repeat button
                     Rectangle {
                         width: 36px;
                         height: 36px;
@@ -187,7 +179,6 @@ export component PlayerView inherits Rectangle {
                 }
             }
 
-            // Right: volume icon + slider + duration
             HorizontalLayout {
                 width: 180px;
                 alignment: LayoutAlignment.end;
@@ -233,7 +224,6 @@ export component PlayerView inherits Rectangle {
             }
         }
 
-        // Seek slider row
         VerticalBox {
             alignment: LayoutAlignment.start;
             padding: 0px;

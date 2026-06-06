@@ -246,7 +246,6 @@ export component PlaylistView inherits VerticalBox {
         }
     }
 
-    // Unified create / rename form — slides in above the + button
     Rectangle {
         height: (!in-playlist && (creating-playlist || renaming-playlist-id != "")) ? 60px : 0px;
         clip: true;
@@ -343,7 +342,6 @@ export component PlaylistView inherits VerticalBox {
         }
     }
 
-    // Small + button at the very bottom
     Rectangle {
         height: !in-playlist ? 55px : 0px;
         clip: true;
