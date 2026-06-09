@@ -4,7 +4,7 @@ use image::{ImageReader, imageops::FilterType};
 use lofty::file::TaggedFileExt;
 use lofty::read_from_path;
 use rodio::Sink;
-use std::collections::VecDeque;
+use std::collections::{HashSet, VecDeque};
 use std::io::Cursor;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -22,6 +22,8 @@ pub struct StateStruct {
     pub volume: f32,
     pub shuffle: bool,
     pub repeat: u8,
+    pub recently_played: VecDeque<Uuid>,
+    pub liked_ids: HashSet<Uuid>,
 }
 
 mod playback;
@@ -60,6 +62,14 @@ impl StateStruct {
             };
 
             self.sink.play();
+
+            crate::helpers::push_history(&mut self.recently_played, song_uuid);
+            let history = self.recently_played.clone();
+            tokio::spawn(async move {
+                if let Err(e) = crate::helpers::save_history(&history).await {
+                    tracing::error!("Failed to save play history: {e}");
+                }
+            });
         }
     }
 

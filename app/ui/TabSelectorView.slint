@@ -15,6 +15,7 @@ export component TabButton inherits Rectangle {
             color: active == tab ? Theme.acct : Theme.txt1;
             animate color { duration: 200ms; }
             font-size: 25px;
+            font-family: "JetBrainsMono NFP";
             vertical-alignment: center;
             horizontal-alignment: center;
         }
@@ -32,8 +33,7 @@ export component TabButton inherits Rectangle {
 
 export component TabSelectorView inherits Rectangle {
     in-out property <Tabs> active-view;
-    callback refresh-playlists();
-    callback refresh-artists();
+    callback refresh-library();
     height: 60px;
 
     Rectangle {
@@ -44,26 +44,17 @@ export component TabSelectorView inherits Rectangle {
             padding: 5px;
             spacing: 5px;
             TabButton {
-                label: "Search";
+                label: "\u{f002} Search";
                 tab: Tabs.Search;
                 active <=> active-view;
             }
 
             TabButton {
-                label: "Playlists";
-                tab: Tabs.Playlists;
-                active <=> active-view;
-                button-clicked => {
-                    refresh-playlists()
-                }
-            }
-
-            TabButton {
-                label: "Library";
+                label: "\u{eb9c} Library";
                 tab: Tabs.Library;
                 active <=> active-view;
                 button-clicked => {
-                    refresh-artists()
+                    refresh-library();
                 }
             }
         }

@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -8,6 +10,7 @@ pub struct PlaylistMinimal {
     pub id: Uuid,
     pub name: String,
     pub len: usize,
+    pub art_paths: Vec<Option<PathBuf>>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]

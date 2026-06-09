@@ -1,64 +1,132 @@
 import { VerticalBox, HorizontalBox } from "std-widgets.slint";
-import { ArtistList, SongList } from "CustomComp.slint";
-import { Song, Theme } from "Types.slint";
+import { SongList, PlList } from "CustomComp.slint";
+import { Song, PlaylistMinimal, Playlist, Theme } from "Types.slint";
 
 export component LibraryView inherits VerticalBox {
-    in property <[string]> artists;
-    in property <[Song]> artist-songs;
-    in-out property <bool> in-artist: false;
-    in-out property <string> current-artist: "";
-    in property <string> current-song-id: "";
+    in property <[Song]> liked-songs;
+    in property <[PlaylistMinimal]> playlists;
+    in property <Playlist> current-playlist;
+    in property <string> current-song-id;
+    in-out property <bool> in-playlist: false;
 
-    callback artist-clicked(string);
     callback item-clicked(string);
-    callback show-context-menu(string, length, length);
+    callback show-context-menu(string, bool, length, length);
     callback toggle-song-selection(string);
+    callback toggle-liked(string, bool);
+    callback show-playlist-context-menu(string, string, length, length);
+    callback get-playlist(string);
+    callback replace-queue(Playlist);
+    callback create-playlist(string);
+    callback rename-playlist(string, string);
+
+    in-out property <bool> creating-playlist: false;
+    in-out property <string> new-playlist-name: "";
+    in-out property <string> renaming-playlist-id: "";
 
     padding: 5px;
-    spacing: 5px;
+    spacing: 0px;
 
     Rectangle {
-
-        ArtistList {
+        // Main view: liked songs + playlists
+        VerticalLayout {
             states [
-                visible when !in-artist: {
+                visible when !in-playlist: {
                     opacity: 1;
                     visible: true;
-                    in-out {
-                        animate opacity { duration: 100ms; }
-                    }
+                    in-out { animate opacity { duration: 100ms; } }
                 }
-                invisible when in-artist: {
+                invisible when in-playlist: {
                     opacity: 0;
                     visible: false;
-                    in-out {
-                        animate opacity { duration: 100ms; }
-                    }
+                    in-out { animate opacity { duration: 100ms; } }
                 }
             ]
-            items: artists;
-            item-clicked(name) => {
-                root.current-artist = name;
-                root.in-artist = true;
-                artist-clicked(name);
+            spacing: 10px;
+            padding: 0px;
+
+            VerticalLayout {
+                vertical-stretch: 1;
+                spacing: 5px;
+
+                HorizontalLayout {
+                    height: 35px;
+                    padding: 0px;
+                    alignment: space-between;
+                    Text {
+                        text: "\u{2665} Liked Songs";
+                        color: Theme.acct;
+                        font-size: 20px;
+                        vertical-alignment: center;
+                    }
+                    Text {
+                        private property <int> cnt: liked-songs.length;
+                        text: cnt + " songs";
+                        color: Theme.txt2;
+                        font-size: 14px;
+                        vertical-alignment: center;
+                        horizontal-alignment: right;
+                    }
+                }
+
+                SongList {
+                    items: liked-songs;
+                    current-song-id: root.current-song-id;
+                    item-clicked(id) => { item-clicked(id); }
+                    show-context-menu(id, liked, x, y) => { show-context-menu(id, liked, x, y); }
+                    toggle-selection(id) => { toggle-song-selection(id); }
+                    toggle-liked(id, liked) => { toggle-liked(id, liked); }
+                }
+            }
+
+            VerticalLayout {
+                vertical-stretch: 2;
+                spacing: 5px;
+
+                HorizontalLayout {
+                    height: 35px;
+                    padding: 0px;
+                    alignment: space-between;
+                    Text {
+                        text: "Playlists";
+                        color: Theme.txt1;
+                        font-size: 20px;
+                        vertical-alignment: center;
+                    }
+                    Text {
+                        private property <int> cnt: playlists.length;
+                        text: cnt + " playlists";
+                        color: Theme.txt2;
+                        font-size: 14px;
+                        vertical-alignment: center;
+                        horizontal-alignment: right;
+                    }
+                }
+
+                PlList {
+                    items: playlists;
+                    item-clicked(id) => {
+                        get-playlist(id);
+                        in-playlist = true;
+                    }
+                    show-context-menu(id, title, x, y) => {
+                        show-playlist-context-menu(id, title, x, y);
+                    }
+                }
             }
         }
 
+        // Playlist detail view
         VerticalLayout {
             states [
-                visible when in-artist: {
+                visible when in-playlist: {
                     opacity: 1;
                     visible: true;
-                    in-out {
-                        animate opacity { duration: 100ms; }
-                    }
+                    in-out { animate opacity { duration: 100ms; } }
                 }
-                invisible when !in-artist: {
+                invisible when !in-playlist: {
                     opacity: 0;
                     visible: false;
-                    in-out {
-                        animate opacity { duration: 100ms; }
-                    }
+                    in-out { animate opacity { duration: 100ms; } }
                 }
             ]
             spacing: 10px;
@@ -72,24 +140,38 @@ export component LibraryView inherits VerticalBox {
                 Rectangle {
                     height: parent.height;
                     width: parent.height;
-                    background: backTouch.has-hover ? Theme.bgd0 : Theme.bgd1;
+                    background: back-touch.has-hover ? Theme.bgd0 : Theme.bgd1;
                     animate background { duration: 200ms; }
                     border-radius: 10px;
                     Text {
-                        height: parent.height;
-                        width: parent.width;
-                        text: "";
-                        font-family: "JetbrainsMono Nerd Font Mono";
+                        text: "";
+                        font-family: "JetBrainsMono NFP";
                         font-size: 40px;
+                        color: Theme.txt1;
                         horizontal-alignment: center;
                         vertical-alignment: center;
-                        color: Theme.txt1;
                     }
-                    backTouch := TouchArea {
-                        clicked => {
-                            root.in-artist = false;
-                            root.current-artist = "";
-                        }
+                    back-touch := TouchArea {
+                        clicked => { in-playlist = false; }
+                    }
+                }
+
+                Rectangle {
+                    height: parent.height;
+                    width: parent.height;
+                    background: play-touch.has-hover ? Theme.bgd0 : Theme.bgd1;
+                    animate background { duration: 200ms; }
+                    border-radius: 10px;
+                    Text {
+                        text: "";
+                        font-family: "JetBrainsMono NFP";
+                        font-size: 40px;
+                        color: Theme.txt1;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                    play-touch := TouchArea {
+                        clicked => { replace-queue(root.current-playlist); }
                     }
                 }
 
@@ -100,28 +182,158 @@ export component LibraryView inherits VerticalBox {
                         padding: 10px;
                         padding-right: 20px;
                         padding-left: 20px;
+                        alignment: space-between;
                         Text {
-                            text: root.current-artist;
+                            text: current-playlist.title;
                             color: Theme.txt1;
                             font-size: 28px;
                             vertical-alignment: center;
-                            horizontal-alignment: left;
+                        }
+                        Text {
+                            private property <int> cnt: current-playlist.songs.length;
+                            text: cnt + (cnt == 1 ? " song" : " songs");
+                            color: Theme.txt2;
+                            font-size: 18px;
+                            vertical-alignment: center;
+                            horizontal-alignment: right;
                         }
                     }
                 }
             }
 
             SongList {
-                items: artist-songs;
+                items: current-playlist.songs;
                 current-song-id: root.current-song-id;
-                item-clicked(id) => {
-                    item-clicked(id);
+                item-clicked(id) => { item-clicked(id); }
+                show-context-menu(id, liked, x, y) => { show-context-menu(id, liked, x, y); }
+                toggle-selection(id) => { toggle-song-selection(id); }
+                toggle-liked(id, liked) => { toggle-liked(id, liked); }
+            }
+        }
+    }
+
+    Rectangle {
+        height: (!in-playlist && (creating-playlist || renaming-playlist-id != "")) ? 60px : 0px;
+        clip: true;
+        animate height { duration: 150ms; easing: ease-in-out-quad; }
+        background: Theme.bgd1;
+        border-radius: 10px;
+
+        HorizontalLayout {
+            padding: 5px;
+            spacing: 5px;
+
+            Rectangle {
+                background: Theme.bgd2;
+                border-radius: 8px;
+                clip: true;
+                HorizontalLayout {
+                    padding: 10px;
+                    TextInput {
+                        font-size: 18px;
+                        color: Theme.txt1;
+                        vertical-alignment: center;
+                        text <=> new-playlist-name;
+                        accepted => {
+                            if new-playlist-name != "" {
+                                if creating-playlist {
+                                    create-playlist(new-playlist-name);
+                                    creating-playlist = false;
+                                } else if renaming-playlist-id != "" {
+                                    rename-playlist(renaming-playlist-id, new-playlist-name);
+                                    renaming-playlist-id = "";
+                                }
+                                new-playlist-name = "";
+                            }
+                        }
+                    }
                 }
-                show-context-menu(id, x, y) => {
-                    show-context-menu(id, x, y);
+            }
+
+            Rectangle {
+                width: 50px;
+                border-radius: 8px;
+                background: confirm-touch.has-hover ? Theme.acct : Theme.bgd3;
+                animate background { duration: 100ms; }
+                Text {
+                    text: "\u{f00c}";
+                    font-family: "JetBrainsMono NFP";
+                    color: Theme.txt2;
+                    font-size: 20px;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
                 }
-                toggle-selection(id) => {
-                    toggle-song-selection(id);
+                confirm-touch := TouchArea {
+                    clicked => {
+                        if new-playlist-name != "" {
+                            if creating-playlist {
+                                create-playlist(new-playlist-name);
+                                creating-playlist = false;
+                            } else if renaming-playlist-id != "" {
+                                rename-playlist(renaming-playlist-id, new-playlist-name);
+                                renaming-playlist-id = "";
+                            }
+                            new-playlist-name = "";
+                        }
+                    }
+                }
+            }
+
+            Rectangle {
+                width: 50px;
+                border-radius: 8px;
+                background: cancel-touch.has-hover ? Theme.bgd3 : Theme.bgd2;
+                animate background { duration: 100ms; }
+                Text {
+                    text: "\u{f00d}";
+                    font-family: "JetBrainsMono NFP";
+                    color: Theme.txt2;
+                    font-size: 20px;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+                cancel-touch := TouchArea {
+                    clicked => {
+                        creating-playlist = false;
+                        renaming-playlist-id = "";
+                        new-playlist-name = "";
+                    }
+                }
+            }
+        }
+    }
+
+    Rectangle {
+        height: !in-playlist ? 55px : 0px;
+        clip: true;
+        animate height { duration: 150ms; easing: ease-in-out-quad; }
+
+        HorizontalLayout {
+            height: 55px;
+            alignment: end;
+            padding: 0px;
+
+            Rectangle {
+                width: 50px;
+                height: 50px;
+                border-radius: 10px;
+                background: plus-touch.has-hover ? Theme.bgd3 : Theme.bgd1;
+                animate background { duration: 100ms; }
+                Text {
+                    text: "+";
+                    color: Theme.acct;
+                    font-size: 28px;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+                plus-touch := TouchArea {
+                    clicked => {
+                        renaming-playlist-id = "";
+                        creating-playlist = !creating-playlist;
+                        if !creating-playlist {
+                            new-playlist-name = "";
+                        }
+                    }
                 }
             }
         }

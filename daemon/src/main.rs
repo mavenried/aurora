@@ -70,6 +70,8 @@ async fn async_main() -> std::io::Result<()> {
     helpers::generate_index(&dirs::home_dir().unwrap().join("Music")).await?;
 
     let index = helpers::load_index().await?;
+    let recently_played = helpers::load_history().await.unwrap_or_default();
+    let liked_ids = helpers::load_liked().await.unwrap_or_default();
 
     let state = Arc::new(Mutex::new(StateStruct {
         current_song: None,
@@ -82,6 +84,8 @@ async fn async_main() -> std::io::Result<()> {
         volume: 1.0,
         shuffle: false,
         repeat: 0,
+        recently_played,
+        liked_ids,
     }));
 
     let state_clone = state.clone();

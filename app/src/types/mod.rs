@@ -15,8 +15,11 @@ pub struct StateStruct {
     pub playlist_list_results: Vec<PlaylistMinimal>,
     pub playlist_result: Option<Playlist>,
     pub selected_song_ids: HashSet<String>,
+    pub liked_song_ids: HashSet<String>,
     pub current_song_id: String,
     pub artist_list: Vec<String>,
     pub artist_songs: Vec<Song>,
+    pub last_played: Vec<Song>,
+    pub liked_songs: Vec<aurora_protocol::Song>,
     pub pending_artist_search: bool,
 }

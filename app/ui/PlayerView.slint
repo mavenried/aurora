@@ -70,9 +70,9 @@ export component PlayerView inherits Rectangle {
                             horizontal-alignment: TextHorizontalAlignment.center;
                             width: 36px;
                             height: 36px;
-                            text: "󰒝";
+                            text: "\u{f049d}";
                             font-size: 22px;
-                            font-family: "JetbrainsMono Nerd Font Mono";
+                            font-family: "JetBrainsMono NFP";
                             color: root.shuffle ? Theme.acct : Theme.txt2;
                         }
                         shuffleTA := TouchArea {
@@ -96,8 +96,9 @@ export component PlayerView inherits Rectangle {
                             horizontal-alignment: TextHorizontalAlignment.center;
                             width: 40px;
                             height: 40px;
-                            text: "󰒮";
+                            text: "\u{f04ae}";
                             font-size: 30px;
+                            font-family: "JetBrainsMono NFP";
                             color: Theme.btns;
                         }
                         prevTA := TouchArea {
@@ -118,8 +119,9 @@ export component PlayerView inherits Rectangle {
                             horizontal-alignment: TextHorizontalAlignment.center;
                             width: 40px;
                             height: 40px;
-                            text: root.is-paused ? "󰐊" : "󰏤";
+                            text: root.is-paused ? "\u{f040a}" : "\u{f03e4}";
                             font-size: root.is-paused ? 25px : 30px;
+                            font-family: "JetBrainsMono NFP";
                             color: Theme.btns;
                         }
                         playTA := TouchArea {
@@ -140,8 +142,9 @@ export component PlayerView inherits Rectangle {
                             horizontal-alignment: TextHorizontalAlignment.center;
                             width: 40px;
                             height: 40px;
-                            text: "󰒭";
+                            text: "\u{f04ad}";
                             font-size: 30px;
+                            font-family: "JetBrainsMono NFP";
                             color: Theme.btns;
                         }
                         nextTA := TouchArea {
@@ -162,9 +165,9 @@ export component PlayerView inherits Rectangle {
                             horizontal-alignment: TextHorizontalAlignment.center;
                             width: 36px;
                             height: 36px;
-                            text: root.repeat == 1 ? "󰑗" : "󰑖";
+                            text: root.repeat == 1 ? "\u{f0457}" : "\u{f0456}";
                             font-size: 22px;
-                            font-family: "JetbrainsMono Nerd Font Mono";
+                            font-family: "JetBrainsMono NFP";
                             color: root.repeat == 1 ? Theme.acct : Theme.txt2;
                         }
                         repeatTA := TouchArea {
@@ -188,9 +191,9 @@ export component PlayerView inherits Rectangle {
                 VerticalLayout {
                     alignment: LayoutAlignment.center;
                     Text {
-                        text: "󰕾";
+                        text: "\u{f057e}";
                         font-size: 18px;
-                        font-family: "JetbrainsMono Nerd Font Mono";
+                        font-family: "JetBrainsMono NFP";
                         color: Theme.txt2;
                         vertical-alignment: center;
                     }

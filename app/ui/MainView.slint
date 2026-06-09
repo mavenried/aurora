@@ -1,6 +1,6 @@
 import { VerticalBox, HorizontalBox } from "std-widgets.slint";
-import { ComboBox, SongList, PlList } from "CustomComp.slint";
-import { Song, PlaylistMinimal, Playlist, Theme, Tabs }from "Types.slint";
+import { ComboBox, SongList } from "CustomComp.slint";
+import { Song, PlaylistMinimal, Playlist, Theme, Tabs } from "Types.slint";
 import { LibraryView } from "LibraryView.slint";
 
 export component SearchView inherits VerticalBox {
@@ -10,8 +10,9 @@ export component SearchView inherits VerticalBox {
     in property <string> current-song-id: "";
     callback submit(string, string, bool);
     callback item-clicked(string);
-    callback show-context-menu(string, length, length);
+    callback show-context-menu(string, bool, length, length);
     callback toggle-song-selection(string);
+    callback toggle-liked(string, bool);
     padding: 5px;
 
     VerticalLayout {
@@ -28,14 +29,14 @@ export component SearchView inherits VerticalBox {
                     padding: 10px;
 
                     Text {
-                        text: " ";
+                        text: "\u{f002}";
                         height: parent.height - 20px;
                         width: parent.height - 20px;
                         font-size: 30px;
                         vertical-alignment: center;
                         horizontal-alignment: center;
                         color: Theme.srch;
-                        font-family: "JetbrainsMono Nerd Font";
+                        font-family: "JetBrainsMono NFP";
                     }
 
                     Rectangle {
@@ -67,318 +68,44 @@ export component SearchView inherits VerticalBox {
             }
         }
 
-        SongList {
+        if query == "" && searchResults.length == 0: VerticalLayout {
+            alignment: center;
+
+            VerticalLayout {
+                spacing: 15px;
+
+                Text {
+                    text: "\u{f002}";
+                    font-family: "JetBrainsMono NFP";
+                    font-size: 90px;
+                    color: Theme.bgd3;
+                    horizontal-alignment: center;
+                }
+
+                Text {
+                    text: "Search your library";
+                    color: Theme.txt2;
+                    font-size: 24px;
+                    horizontal-alignment: center;
+                }
+
+                Text {
+                    text: "Find songs by title or artist using the bar above";
+                    color: Theme.srch;
+                    font-size: 15px;
+                    horizontal-alignment: center;
+                }
+            }
+        }
+
+        if !(query == "" && searchResults.length == 0): SongList {
             z: -1;
             items: searchResults;
             current-song-id: current-song-id;
-            item-clicked(id) => {
-                item-clicked(id);
-            }
-            show-context-menu(id, x, y) => {
-                show-context-menu(id, x, y);
-            }
-            toggle-selection(id) => {
-                toggle-song-selection(id);
-            }
-        }
-    }
-}
-
-export component PlaylistView inherits VerticalBox {
-    in property <[PlaylistMinimal]> playlists;
-    in-out property <bool> in-playlist;
-    in-out property <Playlist> current-playlist;
-    in-out property <bool> creating-playlist: false;
-    in-out property <string> new-playlist-name: "";
-    in-out property <string> renaming-playlist-id: "";
-    in property <string> current-song-id: "";
-    callback get-playlist(string);
-    callback item-clicked(string);
-    callback show-context-menu(string, length, length);
-    callback show-playlist-context-menu(string, string, length, length);
-    callback replace-queue(Playlist);
-    callback create-playlist(string);
-    callback rename-playlist(string, string);
-    callback toggle-song-selection(string);
-    padding: 5px;
-
-    Rectangle {
-        PlList {
-            states [
-                visible when !in-playlist: {
-                    opacity: 1;
-                    visible: true;
-                    in-out {
-                        animate opacity { duration: 100ms; }
-                    }
-                }
-                invisible when in-playlist: {
-                    opacity: 0;
-                    visible: false;
-                    in-out {
-                        animate opacity { duration: 100ms; }
-                    }
-                }
-            ]
-            items: playlists;
-            item-clicked(id) => {
-                get-playlist(id);
-                in-playlist = true;
-            }
-            show-context-menu(id, title, x, y) => {
-                show-playlist-context-menu(id, title, x, y);
-            }
-        }
-
-        VerticalLayout {
-            states [
-                visible when in-playlist: {
-                    opacity: 1;
-                    visible: true;
-                    in-out {
-                        animate opacity { duration: 100ms; }
-                    }
-                }
-                invisible when !in-playlist: {
-                    opacity: 0;
-                    visible: false;
-                    in-out {
-                        animate opacity { duration: 100ms; }
-                    }
-                }
-            ]
-            spacing: 10px;
-            padding: 0px;
-
-            HorizontalLayout {
-                padding: 0px;
-                height: 60px;
-                spacing: 5px;
-                Rectangle {
-                    height: parent.height;
-                    width: parent.height;
-                    background: touch.has-hover ? Theme.bgd0 : Theme.bgd1;
-                    animate background { duration: 200ms; }
-                    border-radius: 10px;
-                    Text {
-                        height: parent.height;
-                        width: parent.width;
-                        text: "";
-                        font-family: "JetbrainsMono Nerd Font Mono";
-                        font-size: 40px;
-                        horizontal-alignment: center;
-                        vertical-alignment: center;
-                        color: Theme.txt1;
-                    }
-
-                    touch := TouchArea {
-                        clicked => {
-                            in-playlist = false;
-                        }
-                    }
-                }
-
-                Rectangle {
-                    height: parent.height;
-                    width: parent.height;
-                    background: touch2.has-hover ? Theme.bgd0 : Theme.bgd1;
-                    animate background { duration: 200ms; }
-                    border-radius: 10px;
-                    Text {
-                        height: parent.height;
-                        width: parent.width;
-                        text: "";
-                        font-family: "JetbrainsMono Nerd Font Mono";
-                        font-size: 40px;
-                        horizontal-alignment: center;
-                        vertical-alignment: center;
-                        color: Theme.txt1;
-                    }
-
-                    touch2 := TouchArea {
-                        clicked => {
-                            replace-queue(root.current-playlist);
-                        }
-                    }
-                }
-
-                Rectangle {
-                    background: Theme.bgd1;
-                    border-radius: 10px;
-                    HorizontalLayout {
-                        padding: 10px;
-                        padding-right: 20px;
-                        padding-left: 20px;
-                        alignment: space-between;
-                        Text {
-                            text: current-playlist.title;
-                            color: Theme.txt1;
-                            font-size: 30px;
-                            vertical-alignment: center;
-                            horizontal-alignment: left;
-                        }
-
-                        Text {
-                            private property <string> len: current-playlist.songs.length;
-                            text: len + (len == 1 ? " song" : " songs");
-                            color: Theme.txt2;
-                            font-size: 20px;
-                            vertical-alignment: center;
-                            horizontal-alignment: right;
-                        }
-                    }
-                }
-            }
-
-            SongList {
-                items: current-playlist.songs;
-                current-song-id: current-song-id;
-                item-clicked(id) => {
-                    item-clicked(id);
-                }
-                show-context-menu(id, x, y) => {
-                    show-context-menu(id, x, y);
-                }
-                toggle-selection(id) => {
-                    toggle-song-selection(id);
-                }
-            }
-        }
-    }
-
-    Rectangle {
-        height: (!in-playlist && (creating-playlist || renaming-playlist-id != "")) ? 60px : 0px;
-        clip: true;
-        animate height {
-            duration: 150ms;
-            easing: ease-in-out-quad;
-        }
-        background: Theme.bgd1;
-        border-radius: 10px;
-
-        HorizontalLayout {
-            padding: 5px;
-            spacing: 5px;
-
-            Rectangle {
-                background: Theme.bgd2;
-                border-radius: 8px;
-                clip: true;
-                HorizontalLayout {
-                    padding: 10px;
-                    TextInput {
-                        font-size: 18px;
-                        color: Theme.txt1;
-                        vertical-alignment: center;
-                        text <=> new-playlist-name;
-                        accepted => {
-                            if new-playlist-name != "" {
-                                if creating-playlist {
-                                    create-playlist(new-playlist-name);
-                                    creating-playlist = false;
-                                } else if renaming-playlist-id != "" {
-                                    rename-playlist(renaming-playlist-id, new-playlist-name);
-                                    renaming-playlist-id = "";
-                                }
-                                new-playlist-name = "";
-                            }
-                        }
-                    }
-                }
-            }
-
-            Rectangle {
-                width: 50px;
-                border-radius: 8px;
-                background: confirm-touch.has-hover ? Theme.acct : Theme.bgd3;
-                animate background { duration: 100ms; }
-                Text {
-                    text: "";
-                    font-family: "JetbrainsMono Nerd Font Mono";
-                    color: Theme.bgd0;
-                    font-size: 20px;
-                    horizontal-alignment: center;
-                    vertical-alignment: center;
-                }
-
-                confirm-touch := TouchArea {
-                    clicked => {
-                        if new-playlist-name != "" {
-                            if creating-playlist {
-                                create-playlist(new-playlist-name);
-                                creating-playlist = false;
-                            } else if renaming-playlist-id != "" {
-                                rename-playlist(renaming-playlist-id, new-playlist-name);
-                                renaming-playlist-id = "";
-                            }
-                            new-playlist-name = "";
-                        }
-                    }
-                }
-            }
-
-            Rectangle {
-                width: 50px;
-                border-radius: 8px;
-                background: cancel-touch.has-hover ? Theme.bgd3 : Theme.bgd2;
-                animate background { duration: 100ms; }
-                Text {
-                    text: "";
-                    font-family: "JetbrainsMono Nerd Font Mono";
-                    color: Theme.txt2;
-                    font-size: 20px;
-                    horizontal-alignment: center;
-                    vertical-alignment: center;
-                }
-
-                cancel-touch := TouchArea {
-                    clicked => {
-                        creating-playlist = false;
-                        renaming-playlist-id = "";
-                        new-playlist-name = "";
-                    }
-                }
-            }
-        }
-    }
-
-    Rectangle {
-        height: !in-playlist ? 55px : 0px;
-        clip: true;
-        animate height {
-            duration: 150ms;
-            easing: ease-in-out-quad;
-        }
-
-        HorizontalLayout {
-            height: 55px;
-            alignment: end;
-            padding: 0px;
-
-            Rectangle {
-                width: 50px;
-                height: 50px;
-                border-radius: 10px;
-                background: plus-touch.has-hover ? Theme.bgd3 : Theme.bgd1;
-                animate background { duration: 100ms; }
-                Text {
-                    text: "+";
-                    color: Theme.acct;
-                    font-size: 28px;
-                    horizontal-alignment: center;
-                    vertical-alignment: center;
-                }
-
-                plus-touch := TouchArea {
-                    clicked => {
-                        renaming-playlist-id = "";
-                        creating-playlist = !creating-playlist;
-                        if !creating-playlist {
-                            new-playlist-name = "";
-                        }
-                    }
-                }
-            }
+            item-clicked(id) => { item-clicked(id); }
+            show-context-menu(id, liked, x, y) => { show-context-menu(id, liked, x, y); }
+            toggle-selection(id) => { toggle-song-selection(id); }
+            toggle-liked(id, liked) => { toggle-liked(id, liked); }
         }
     }
 }
@@ -390,137 +117,70 @@ export component MainView inherits Rectangle {
     in property <[Song]> searchResults;
     in property <[PlaylistMinimal]> playlists;
     in property <Playlist> current-playlist;
-    in property <bool> searchOverflow;
-    in property <[string]> artists;
-    in property <[Song]> artist-songs;
+    in property <[Song]> liked-songs;
     in property <string> current-song-id: "";
-    out property <bool> in-playlist <=> plView.in-playlist;
-    in-out property <string> renaming-playlist-id <=> plView.renaming-playlist-id;
-    in-out property <string> new-playlist-name <=> plView.new-playlist-name;
+    out property <bool> in-playlist <=> libView.in-playlist;
+    in-out property <string> renaming-playlist-id <=> libView.renaming-playlist-id;
+    in-out property <string> new-playlist-name <=> libView.new-playlist-name;
     callback query-submit(string, string, bool);
     callback add(string);
-    callback get-all-playlists();
     callback get-playlist(string);
     callback replace-queue(Playlist);
-    callback show-context-menu(string, length, length);
+    callback show-context-menu(string, bool, length, length);
     callback show-playlist-context-menu(string, string, length, length);
     callback create-playlist(string);
     callback rename-playlist(string, string);
     callback toggle-song-selection(string);
-    callback get-artist-list();
-    callback get-songs-by-artist(string);
+    callback toggle-liked(string, bool);
 
     SearchView {
         states [
             visible when active-view == Tabs.Search: {
                 opacity: 1;
                 visible: true;
-                in-out {
-                    animate opacity { duration: 100ms; }
-                }
+                in-out { animate opacity { duration: 100ms; } }
             }
             invisible when active-view != Tabs.Search: {
                 opacity: 0;
                 visible: false;
-                in-out {
-                    animate opacity { duration: 100ms; }
-                }
+                in-out { animate opacity { duration: 100ms; } }
             }
         ]
 
         searchResults: root.searchResults;
         current-song-id: root.current-song-id;
-        submit(q, m, f) => {
-            query-submit(q, m, f);
-        }
-        item-clicked(id) => {
-            add(id);
-        }
-        show-context-menu(id, x, y) => {
-            show-context-menu(id, x, y);
-        }
-        toggle-song-selection(id) => {
-            toggle-song-selection(id);
-        }
+        submit(q, m, f) => { query-submit(q, m, f); }
+        item-clicked(id) => { add(id); }
+        show-context-menu(id, liked, x, y) => { show-context-menu(id, liked, x, y); }
+        toggle-song-selection(id) => { toggle-song-selection(id); }
+        toggle-liked(id, liked) => { toggle-liked(id, liked); }
     }
 
-    plView := PlaylistView {
-        states [
-            visible when active-view == Tabs.Playlists: {
-                opacity: 1;
-                visible: true;
-                in-out {
-                    animate opacity { duration: 100ms; }
-                }
-            }
-            invisible when active-view != Tabs.Playlists: {
-                opacity: 0;
-                visible: false;
-                in-out {
-                    animate opacity { duration: 100ms; }
-                }
-            }
-        ]
-        current-playlist: root.current-playlist;
-        playlists: root.playlists;
-        current-song-id: root.current-song-id;
-        get-playlist(id) => {
-            get-playlist(id);
-        }
-        item-clicked(id) => {
-            add(id);
-        }
-        show-context-menu(id, x, y) => {
-            show-context-menu(id, x, y);
-        }
-        show-playlist-context-menu(id, title, x, y) => {
-            show-playlist-context-menu(id, title, x, y);
-        }
-        replace-queue(pl) => {
-            replace-queue(pl);
-        }
-        create-playlist(name) => {
-            create-playlist(name);
-        }
-        rename-playlist(id, name) => {
-            rename-playlist(id, name);
-        }
-        toggle-song-selection(id) => {
-            toggle-song-selection(id);
-        }
-    }
-
-    LibraryView {
+    libView := LibraryView {
         states [
             visible when active-view == Tabs.Library: {
                 opacity: 1;
                 visible: true;
-                in-out {
-                    animate opacity { duration: 100ms; }
-                }
+                in-out { animate opacity { duration: 100ms; } }
             }
             invisible when active-view != Tabs.Library: {
                 opacity: 0;
                 visible: false;
-                in-out {
-                    animate opacity { duration: 100ms; }
-                }
+                in-out { animate opacity { duration: 100ms; } }
             }
         ]
-        artists: root.artists;
-        artist-songs: root.artist-songs;
+        liked-songs: root.liked-songs;
+        playlists: root.playlists;
+        current-playlist: root.current-playlist;
         current-song-id: root.current-song-id;
-        artist-clicked(name) => {
-            root.get-songs-by-artist(name);
-        }
-        item-clicked(id) => {
-            root.add(id);
-        }
-        show-context-menu(id, x, y) => {
-            root.show-context-menu(id, x, y);
-        }
-        toggle-song-selection(id) => {
-            root.toggle-song-selection(id);
-        }
+        item-clicked(id) => { root.add(id); }
+        show-context-menu(id, liked, x, y) => { root.show-context-menu(id, liked, x, y); }
+        toggle-song-selection(id) => { root.toggle-song-selection(id); }
+        toggle-liked(id, liked) => { root.toggle-liked(id, liked); }
+        show-playlist-context-menu(id, title, x, y) => { root.show-playlist-context-menu(id, title, x, y); }
+        get-playlist(id) => { root.get-playlist(id); }
+        replace-queue(pl) => { root.replace-queue(pl); }
+        create-playlist(name) => { root.create-playlist(name); }
+        rename-playlist(id, name) => { root.rename-playlist(id, name); }
     }
 }

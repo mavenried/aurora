@@ -19,6 +19,8 @@ pub struct Song {
     pub artists: Vec<String>,
     pub duration: Duration,
     pub art_path: Option<PathBuf>,
+    #[serde(default)]
+    pub liked: bool,
 }
 
 impl From<&SongMeta> for Song {
@@ -29,6 +31,7 @@ impl From<&SongMeta> for Song {
             artists: value.artists.clone(),
             duration: value.duration,
             art_path: value.art_path.clone(),
+            liked: false,
         }
     }
 }

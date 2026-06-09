@@ -1,9 +1,13 @@
+mod history;
 mod index;
+mod liked_store;
 mod playlist;
 use crate::types::*;
 use anyhow::Ok;
 use aurora_protocol::Response;
+pub use history::*;
 pub use index::*;
+pub use liked_store::*;
 pub use playlist::*;
 
 use tokio::io::AsyncWriteExt;

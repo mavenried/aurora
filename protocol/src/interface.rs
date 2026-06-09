@@ -28,6 +28,10 @@ pub enum Request {
     SetShuffle(bool),
     SetRepeat(u8),
     GetArtistList,
+    GetLastPlayed,
+    LikeSong(Uuid),
+    UnlikeSong(Uuid),
+    GetLikedSongs,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -41,4 +45,6 @@ pub enum Response {
     Theme(Theme),
     Volume(f32),
     ArtistList(Vec<String>),
+    LastPlayed(Vec<Song>),
+    LikedSongs(Vec<Song>),
 }

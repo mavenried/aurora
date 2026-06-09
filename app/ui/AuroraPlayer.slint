@@ -33,7 +33,7 @@ export component AuroraPlayer inherits Window {
     callback refresh-playlists();
     callback select-playlist(string);
     callback replace-queue(Playlist);
-    callback show-context-menu(string, length, length);
+    callback show-context-menu(string, bool, length, length);
     callback create-playlist(string);
     callback add-songs-to-playlist(string, string);
     callback remove-song-from-playlist(string, string);
@@ -45,6 +45,11 @@ export component AuroraPlayer inherits Window {
     callback set-volume(float);
     callback get-artist-list();
     callback get-songs-by-artist(string);
+    callback get-last-played();
+    callback clear-song-selection();
+    callback like-song(string);
+    callback unlike-song(string);
+    callback get-liked-songs();
 
     in-out property <string> Title: "Nothing Playing";
     in-out property <string> Artists: "No artist";
@@ -58,6 +63,8 @@ export component AuroraPlayer inherits Window {
     in-out property <float> volume: 1.0;
     in-out property <[string]> artist-list;
     in-out property <[Song]> artist-songs;
+    in-out property <[Song]> last-played;
+    in-out property <[Song]> liked-songs;
     in-out property <string> current-playing-id: "";
 
     in-out property <[Song]> queue;
@@ -71,11 +78,14 @@ export component AuroraPlayer inherits Window {
         ]
     };
 
-    in-out property <Tabs> active-view: Tabs.Playlists;
+    in-out property <Tabs> active-view: Tabs.Library;
+    in-out property <bool> disconnected: false;
+
     in-out property <bool> context-menu-visible: false;
     in-out property <length> context-menu-x: 0px;
     in-out property <length> context-menu-y: 0px;
     in-out property <string> context-menu-song-id: "";
+    in-out property <bool> context-menu-song-liked: false;
 
     in-out property <bool> pl-context-menu-visible: false;
     in-out property <length> pl-context-menu-x: 0px;
@@ -87,6 +97,18 @@ export component AuroraPlayer inherits Window {
     in-out property <length> queue-ctx-x: 0px;
     in-out property <length> queue-ctx-y: 0px;
     in-out property <int> queue-ctx-idx: -1;
+
+    forward-focus: key-handler;
+
+    key-handler := FocusScope {
+        key-pressed(event) => {
+            if event.modifiers.control && event.text == Key.Escape {
+                root.clear-song-selection();
+                return EventResult.accept;
+            }
+            EventResult.reject
+        }
+    }
 
     title: "Aurora Player";
     min-height: 650px;
@@ -113,10 +135,14 @@ export component AuroraPlayer inherits Window {
         x-position <=> root.context-menu-x;
         y-position <=> root.context-menu-y;
         song-id <=> root.context-menu-song-id;
+        song-liked <=> root.context-menu-song-liked;
+        window-height: root.height;
         playlists: root.playlistsList;
         playlist-id: main-view.in-playlist ? root.playlistResult.id : "";
         play-next(id) => { root.play-next(id); }
         add-to-queue(id) => { root.enqueue(id); }
+        like-song(id) => { root.like-song(id); }
+        unlike-song(id) => { root.unlike-song(id); }
         add-to-playlist(playlist-id) => {
             root.add-songs-to-playlist(playlist-id, root.context-menu-song-id);
         }
@@ -150,8 +176,8 @@ export component AuroraPlayer inherits Window {
                     queue-move(from, to) => { root.queue-move(from, to) }
                     show-queue-context-menu(idx, x, y) => {
                         root.queue-ctx-idx = idx;
-                        root.queue-ctx-x = x;
-                        root.queue-ctx-y = y;
+                        root.queue-ctx-x = (x + 160px > root.width) ? max(0px, x - 160px) : x;
+                        root.queue-ctx-y = (y + 90px > root.height) ? max(0px, y - 90px) : y;
                         root.queue-ctx-visible = true;
                     }
                 }
@@ -172,8 +198,10 @@ export component AuroraPlayer inherits Window {
 
                 TabSelectorView {
                     active-view <=> root.active-view;
-                    refresh-playlists => { refresh-playlists() }
-                    refresh-artists => { root.get-artist-list() }
+                    refresh-library => {
+                        root.get-liked-songs();
+                        root.refresh-playlists();
+                    }
                 }
 
                 main-view := MainView {
@@ -181,30 +209,32 @@ export component AuroraPlayer inherits Window {
                     searchResults: root.searchResults;
                     current-playlist: root.playlistResult;
                     playlists: root.playlistsList;
-                    artists: root.artist-list;
-                    artist-songs: root.artist-songs;
+                    liked-songs: root.liked-songs;
                     current-song-id: root.current-playing-id;
                     query-submit(q, m, f) => { search(q, m, f); }
                     add(s) => { root.add(s); }
                     get-playlist(s) => { select-playlist(s) }
                     replace-queue(pl) => { root.replace-queue(pl) }
-                    show-context-menu(id, x, y) => {
+                    show-context-menu(id, liked, x, y) => {
                         root.context-menu-song-id = id;
-                        root.context-menu-x = x;
+                        root.context-menu-song-liked = liked;
+                        root.context-menu-x = (x + 200px > root.width) ? max(0px, x - 200px) : x;
                         root.context-menu-y = y;
                         root.context-menu-visible = true;
                     }
                     show-playlist-context-menu(id, title, x, y) => {
                         root.pl-context-menu-playlist-id = id;
                         root.pl-context-menu-playlist-title = title;
-                        root.pl-context-menu-x = x;
-                        root.pl-context-menu-y = y;
+                        root.pl-context-menu-x = (x + 200px > root.width) ? max(0px, x - 200px) : x;
+                        root.pl-context-menu-y = (y + 90px > root.height) ? max(0px, y - 90px) : y;
                         root.pl-context-menu-visible = true;
                     }
                     create-playlist(name) => { root.create-playlist(name); }
                     rename-playlist(id, name) => { root.rename-playlist(id, name); }
                     toggle-song-selection(id) => { root.toggle-song-selection(id); }
-                    get-songs-by-artist(name) => { root.get-songs-by-artist(name); }
+                    toggle-liked(id, liked) => {
+                        if (liked) { root.unlike-song(id); } else { root.like-song(id); }
+                    }
                 }
 
                 PlayerView {
@@ -230,8 +260,8 @@ export component AuroraPlayer inherits Window {
             enabled: root.context-menu-visible || root.pl-context-menu-visible || root.queue-ctx-visible;
             clicked => {
                 if root.context-menu-visible {
-                    if (self.mouse-x < root.context-menu-x || self.mouse-x > root.context-menu-x + 200px ||
-                        self.mouse-y < root.context-menu-y || self.mouse-y > root.context-menu-y + context-menu.total-height) {
+                    if (self.mouse-x < context-menu.x || self.mouse-x > context-menu.x + 200px ||
+                        self.mouse-y < context-menu.y || self.mouse-y > context-menu.y + context-menu.height) {
                         root.context-menu-visible = false;
                     }
                 }
@@ -246,6 +276,45 @@ export component AuroraPlayer inherits Window {
                         self.mouse-y < root.queue-ctx-y || self.mouse-y > root.queue-ctx-y + 90px) {
                         root.queue-ctx-visible = false;
                     }
+                }
+            }
+        }
+    }
+
+    if root.disconnected: Rectangle {
+        z: 2000;
+        background: #000000cc;
+
+        Rectangle {
+            width: 420px;
+            height: 160px;
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2;
+            background: Theme.bgd1;
+            border-radius: 15px;
+            border-width: 1px;
+            border-color: Theme.bgd4;
+            drop-shadow-color: Theme.bgd0;
+            drop-shadow-blur: 20px;
+
+            VerticalLayout {
+                padding: 30px;
+                spacing: 12px;
+                alignment: center;
+
+                Text {
+                    text: "Disconnected from daemon";
+                    color: Theme.txt1;
+                    font-size: 20px;
+                    horizontal-alignment: center;
+                }
+
+                Text {
+                    text: "The Aurora daemon has stopped. Close the player.";
+                    color: Theme.txt2;
+                    font-size: 14px;
+                    horizontal-alignment: center;
+                    wrap: word-wrap;
                 }
             }
         }

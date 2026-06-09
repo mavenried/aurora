@@ -1,4 +1,5 @@
-use aurora_protocol::Response;
+use aurora_protocol::{Response, Song};
+use uuid::Uuid;
 
 use crate::{
     helpers::send_to_client,
@@ -35,4 +36,37 @@ pub async fn get_artist_list(writer: &WriteSocket, state: &State) -> anyhow::Res
     artists.sort();
     drop(state_locked);
     send_to_client(writer, &Response::ArtistList(artists)).await
+}
+
+pub async fn get_last_played(writer: &WriteSocket, state: &State) -> anyhow::Result<()> {
+    let mut state_locked = state.lock().await;
+
+    let missing: Vec<Uuid> = state_locked
+        .recently_played
+        .iter()
+        .filter(|id| !state_locked.index.contains_key(id))
+        .cloned()
+        .collect();
+
+    if !missing.is_empty() {
+        state_locked.recently_played.retain(|id| !missing.contains(id));
+        let history = state_locked.recently_played.clone();
+        tokio::spawn(async move {
+            if let Err(e) = crate::helpers::save_history(&history).await {
+                tracing::error!("Failed to save play history: {e}");
+            }
+        });
+    }
+
+    let ids: Vec<Uuid> = state_locked.recently_played.iter().cloned().collect();
+    let mut songs = vec![];
+    for id in ids {
+        state_locked.get_art(id);
+        if let Some(meta) = state_locked.index.get(&id) {
+            songs.push(Song::from(meta));
+        }
+    }
+
+    drop(state_locked);
+    send_to_client(writer, &Response::LastPlayed(songs)).await
 }

@@ -2,10 +2,12 @@ import { HorizontalBox, VerticalBox } from "std-widgets.slint";
 import { Song, PlaylistMinimal, Theme } from "Types.slint";
 
 export component ScrollView inherits Rectangle {
-    in property <length> content-height;
     in property <int> direction: 1;
     out property <length> viewport-y <=> touch.viewport-y;
+    private property <length> content-height: layout.preferred-height;
 
+    min-width: 0px;
+    min-height: 0px;
     clip: true;
 
     changed content-height => {
@@ -25,7 +27,8 @@ export component ScrollView inherits Rectangle {
         rect := Rectangle {
             y: touch.viewport-y;
             width: parent.width;
-            VerticalLayout {
+            height: layout.preferred-height;
+            layout := VerticalLayout {
                 @children
             }
         }
@@ -157,7 +160,7 @@ export component ComboBox {
             }
 
             Text {
-                text: root.expanded ? "▲" : "▼";
+                text: root.expanded ? "\u{25B2}" : "\u{25BC}";
                 horizontal-alignment: right;
                 vertical-alignment: center;
                 color: Theme.txt1;
@@ -215,57 +218,198 @@ export component ComboBox {
     }
 }
 
+export component SongCard inherits Rectangle {
+    in property <Song> song;
+    in property <bool> current: false;
+    callback clicked();
+
+    width: 150px;
+    height: 204px;
+    border-radius: 10px;
+    background: touch.has-hover ? Theme.bgd3 : Theme.bgd2;
+    animate background { duration: 100ms; }
+
+    touch := TouchArea {
+        clicked => {
+            root.clicked();
+        }
+    }
+
+    VerticalLayout {
+        padding: 16px;
+        spacing: 10px;
+
+        Rectangle {
+            height: 122px;
+            border-radius: 8px;
+            clip: true;
+            Image {
+                source: root.song.album-art;
+                width: parent.width;
+                height: parent.height;
+            }
+        }
+
+        Text {
+            text: root.song.title;
+            color: root.current ? Theme.acct : Theme.txt1;
+            font-size: 16px;
+            overflow: elide;
+            horizontal-alignment: left;
+        }
+
+        Text {
+            text: root.song.artists;
+            color: Theme.txt2;
+            font-size: 13px;
+            overflow: elide;
+            horizontal-alignment: left;
+        }
+    }
+}
+
+export component SongCardRow inherits Rectangle {
+    in property <[Song]> items;
+    in property <string> current-song-id: "";
+    callback item-clicked(string);
+
+    height: 204px;
+    clip: true;
+
+    ScrollView {
+        direction: 1;
+        HorizontalLayout {
+            spacing: 10px;
+            padding: 0px;
+            for item[i] in items: SongCard {
+                song: item;
+                current: root.current-song-id != "" && item.id == root.current-song-id;
+                clicked => {
+                    root.item-clicked(item.id);
+                }
+            }
+        }
+    }
+}
+
+export component PlaylistCard inherits Rectangle {
+    in property <PlaylistMinimal> playlist;
+    callback clicked();
+    callback show-context-menu(string, string, length, length);
+
+    width: 170px;
+    height: 224px;
+    border-radius: 10px;
+    background: touch.has-hover ? Theme.bgd3 : Theme.bgd2;
+    animate background { duration: 100ms; }
+
+    touch := TouchArea {
+        pointer-event(event) => {
+            if event.button == PointerEventButton.right && event.kind == PointerEventKind.down {
+                show-context-menu(playlist.id, playlist.title, touch.absolute-position.x + touch.mouse-x, touch.absolute-position.y + touch.mouse-y);
+            }
+        }
+        clicked => {
+            root.clicked();
+        }
+    }
+
+    VerticalLayout {
+        padding: 16px;
+        spacing: 10px;
+
+        Rectangle {
+            height: 138px;
+            border-radius: 8px;
+            background: Theme.bgd3;
+            clip: true;
+
+            if playlist.album-arts.length == 0: Text {
+                text: "";
+                font-family: "JetBrainsMono NFP";
+                font-size: 32px;
+                color: Theme.acct;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+
+            if playlist.album-arts.length > 0: GridLayout {
+                spacing: 0px;
+                Row {
+                    Image {
+                        source: playlist.album-arts[0];
+                        width: 69px;
+                        height: 69px;
+                    }
+                    Image {
+                        source: playlist.album-arts[1];
+                        width: 69px;
+                        height: 69px;
+                    }
+                }
+                Row {
+                    Image {
+                        source: playlist.album-arts[2];
+                        width: 69px;
+                        height: 69px;
+                    }
+                    Image {
+                        source: playlist.album-arts[3];
+                        width: 69px;
+                        height: 69px;
+                    }
+                }
+            }
+        }
+
+        Text {
+            text: playlist.title;
+            color: Theme.txt1;
+            font-size: 18px;
+            overflow: elide;
+            horizontal-alignment: left;
+        }
+
+        Text {
+            text: playlist.length + (playlist.length == 1 ? " song" : " songs");
+            color: Theme.txt2;
+            font-size: 14px;
+            overflow: elide;
+            horizontal-alignment: left;
+        }
+    }
+}
+
 export component PlList inherits VerticalLayout {
     in property <[PlaylistMinimal]> items;
     callback item-clicked(string);
     callback show-context-menu(string, string, length, length);
+
+    private property <int> columns: max(1, floor(self.width / 184px));
+    private property <int> row-count: (items.length + columns - 1) / columns;
+
     Rectangle {
         border-radius: 10px;
         clip: true;
         ScrollView {
-            content-height: 65px * items.length - 5px;
             direction: -1;
-            box := VerticalBox {
-                spacing: 5px;
+            VerticalLayout {
+                spacing: 14px;
                 padding: 0px;
-                for item[i] in items: Rectangle {
-                    height: 70px;
-                    border-radius: 10px;
-                    background: touch.has-hover ? Theme.bgd3 : Theme.bgd2;
-                    animate background { duration: 100ms; }
-                    touch := TouchArea {
-                        pointer-event(event) => {
-                            if event.button == PointerEventButton.right && event.kind == PointerEventKind.down {
-                                show-context-menu(item.id, item.title, touch.absolute-position.x + touch.mouse-x, touch.absolute-position.y + touch.mouse-y);
-                            }
-                        }
+
+                for row in row-count: HorizontalLayout {
+                    spacing: 14px;
+                    padding: 0px;
+                    alignment: start;
+
+                    for col in columns: PlaylistCard {
+                        visible: (row * columns + col) < items.length;
+                        playlist: items[row * columns + col];
                         clicked => {
-                            item-clicked(item.id);
+                            item-clicked(items[row * columns + col].id);
                         }
-                    }
-
-                    HorizontalLayout {
-                        padding: 5px;
-                        padding-right: 20px;
-                        padding-left: 20px;
-                        Rectangle {
-                            HorizontalLayout {
-                                Text {
-                                    text: item.title;
-                                    color: Theme.txt1;
-                                    font-size: 30px;
-                                    horizontal-alignment: left;
-                                    vertical-alignment: center;
-                                }
-
-                                Text {
-                                    text: item.length + (item.length == 1 ? "  song." : " songs.");
-                                    color: Theme.txt2;
-                                    font-size: 20px;
-                                    horizontal-alignment: right;
-                                    vertical-alignment: center;
-                                }
-                            }
+                        show-context-menu(id, title, x, y) => {
+                            show-context-menu(id, title, x, y);
                         }
                     }
                 }
@@ -278,13 +422,13 @@ export component SongList inherits VerticalLayout {
     in property <[Song]> items;
     in property <string> current-song-id: "";
     callback item-clicked(string);
-    callback show-context-menu(string, length, length);
+    callback show-context-menu(string, bool, length, length);
     callback toggle-selection(string);
+    callback toggle-liked(string, bool);
     Rectangle {
         border-radius: 10px;
         clip: true;
         ScrollView {
-            content-height: 65px * items.length - 5px;
             direction: -1;
             box := VerticalBox {
                 spacing: 5px;
@@ -322,7 +466,7 @@ export component SongList inherits VerticalLayout {
                                 ctrl-pressed = event.modifiers.control;
                             }
                             if event.button == PointerEventButton.right && event.kind == PointerEventKind.down {
-                                show-context-menu(item.id, touch.absolute-position.x + touch.mouse-x, touch.absolute-position.y + touch.mouse-y);
+                                show-context-menu(item.id, item.liked, touch.absolute-position.x + touch.mouse-x, touch.absolute-position.y + touch.mouse-y);
                             }
                         }
                         clicked => {
@@ -374,6 +518,22 @@ export component SongList inherits VerticalLayout {
                             }
                         }
 
+                        Rectangle {
+                            width: 24px;
+                            heart-ta := TouchArea {
+                                clicked => { root.toggle-liked(item.id, item.liked); }
+                            }
+                            Text {
+                                text: item.liked ? "\u{f004}" : (touch.has-hover || heart-ta.has-hover ? "\u{eb05}" : "");
+                                color: Theme.acct;
+                                font-size: 18px;
+                                font-family: "JetBrainsMono NFP";
+                                vertical-alignment: center;
+                                horizontal-alignment: center;
+                                width: parent.width;
+                            }
+                        }
+
                         Text {
                             text: item.duration;
                             color: Theme.txt2;
@@ -396,7 +556,6 @@ export component ArtistList inherits VerticalLayout {
         border-radius: 10px;
         clip: true;
         ScrollView {
-            content-height: 65px * items.length - 5px;
             direction: -1;
             box := VerticalBox {
                 spacing: 5px;
@@ -530,19 +689,30 @@ export component ContextMenu inherits ContextMenuBase {
     in property <string> song-id;
     in property <[PlaylistMinimal]> playlists;
     in property <string> playlist-id: "";
+    in property <length> window-height: 0px;
+    in property <bool> song-liked: false;
 
     private property <bool> show-playlist-submenu: false;
+    private property <length> expansion-height: show-playlist-submenu ? playlists.length * 40px : 0px;
+    // Expand submenu upward when there isn't enough room below
+    private property <bool> submenu-expand-up:
+        root.y-position + 170px + (root.playlist-id != "" ? 40px : 0px) + root.playlists.length * 40px > root.window-height;
+    animate expansion-height { duration: 150ms; easing: ease-in-out-quad; }
+
     out property <length> total-height:
-        130px +
+        170px +
         (playlist-id != "" ? 40px : 0px) +
-        (show-playlist-submenu ? playlists.length * 35px : 0px);
+        (show-playlist-submenu ? playlists.length * 40px : 0px);
 
     callback add-to-queue(string);
     callback play-next(string);
+    callback like-song(string);
+    callback unlike-song(string);
     callback add-to-playlist(string);
     callback remove-song-from-playlist(string);
 
     height: root.total-height;
+    y: submenu-expand-up ? max(0px, root.y-position - expansion-height) : root.y-position;
     clip: true;
     animate height { duration: 150ms; easing: ease-in-out-quad; }
 
@@ -568,14 +738,21 @@ export component ContextMenu inherits ContextMenuBase {
             clicked => { root.add-to-queue(root.song-id); root.menu-visible = false; }
         }
         MenuItem {
-            text: show-playlist-submenu ? "Add to Playlist ▲" : "Add to Playlist ▶";
+            text: root.song-liked ? "Remove from Liked Songs" : "Add to Liked Songs";
             width: 100%;
-            clicked => { show-playlist-submenu = !show-playlist-submenu; }
+            clicked => {
+                if (root.song-liked) {
+                    root.unlike-song(root.song-id);
+                } else {
+                    root.like-song(root.song-id);
+                }
+                root.menu-visible = false;
+            }
         }
 
-        Rectangle {
+        if submenu-expand-up: Rectangle {
             width: parent.width - 10px;
-            height: show-playlist-submenu ? playlists.length * 35px : 0px;
+            height: show-playlist-submenu ? playlists.length * 40px : 0px;
             clip: true;
             animate height { duration: 150ms; easing: ease-in-out-quad; }
             VerticalLayout {
@@ -584,7 +761,31 @@ export component ContextMenu inherits ContextMenuBase {
                 for pl in playlists: MenuItem {
                     text: pl.title;
                     item-font-size: 14px;
-                    height: 33px;
+                    height: 38px;
+                    width: parent.width;
+                    clicked => { root.add-to-playlist(pl.id); root.menu-visible = false; }
+                }
+            }
+        }
+
+        MenuItem {
+            text: show-playlist-submenu ? "Add to Playlist \u{25B2}" : "Add to Playlist \u{25BC}";
+            width: 100%;
+            clicked => { show-playlist-submenu = !show-playlist-submenu; }
+        }
+
+        if !submenu-expand-up: Rectangle {
+            width: parent.width - 10px;
+            height: show-playlist-submenu ? playlists.length * 40px : 0px;
+            clip: true;
+            animate height { duration: 150ms; easing: ease-in-out-quad; }
+            VerticalLayout {
+                spacing: 2px;
+                padding: 0px;
+                for pl in playlists: MenuItem {
+                    text: pl.title;
+                    item-font-size: 14px;
+                    height: 38px;
                     width: parent.width;
                     clicked => { root.add-to-playlist(pl.id); root.menu-visible = false; }
                 }
