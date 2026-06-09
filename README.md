@@ -7,11 +7,46 @@ A music player.
 
 Indev by [@mavenried](https://github.com/mavenried).
 
-## Todo
+## Overview
 
-- [ ] add ability to add songs to playlists from the search menu
-- [ ] add ability to create and delete playlists
+Aurora is a local music player built in Rust. It follows a daemon/client architecture: a background daemon manages playback and library state, while a [Slint](https://slint.dev)-based GUI connects to it over a Unix socket.
 
-## To Fix
+**Crates:**
 
-- [x] go back to deleting from queue based on index. filtering out based on id will break when duplicates of same song exist in queue. could result in undocumented behaviour
+- `aurora-daemon` — handles audio playback (via rodio/symphonia), library scanning, queue management, playlists, liked songs, and MPRIS
+- `aurora-player` — the GUI frontend built with Slint
+- `aurora-protocol` — shared types and message definitions
+
+## Features
+
+- Library scanning with metadata read via lofty
+- Queue with play-next, enqueue, reorder, and clear
+- Playlists — create, rename, delete, add/remove songs
+- Liked songs stored separately from playlists
+- Search by title or artist
+- Shuffle and repeat modes
+- Volume control
+- MPRIS2 support
+- Album art display
+- Per-song selection for bulk operations
+
+## Running
+
+```sh
+# Kill any existing daemon, then build and launch both
+./run.sh
+```
+
+Or manually:
+
+```sh
+cargo build --release
+cargo run --release -p aurora-daemon
+cargo run --release -p aurora-player
+```
+
+## Requirements
+
+- Rust (edition 2024)
+- A nerd font — the UI uses **JetBrainsMono NFP** (bundled in `app/assets/`)
+- Linux (uses Unix sockets and MPRIS/D-Bus)
