@@ -11,9 +11,9 @@ use crate::{
 
 mod clear;
 mod enqueue;
+mod enqueue_at;
 pub mod liked;
 mod move_queue;
-mod enqueue_at;
 pub mod next_prev;
 mod pause;
 mod playlist;
@@ -54,8 +54,7 @@ pub async fn handle_client(
             let _ =
                 send_to_client(&writer, &Response::Theme(state.lock().await.theme.clone())).await;
 
-            let _ =
-                send_to_client(&writer, &Response::Volume(state.lock().await.volume)).await;
+            let _ = send_to_client(&writer, &Response::Volume(state.lock().await.volume)).await;
 
             let _ = settings::get_last_played(&writer, &state).await;
             let _ = liked::get_liked_songs(&writer, &state).await;
@@ -83,7 +82,9 @@ pub async fn handle_client(
             Request::PlaylistGet(pl_uuid) => playlist::playlist_get(&writer, &state, pl_uuid).await,
             Request::Search(st) => search::search(&writer, &state, st).await,
             Request::Clear => clear::clear(&state).await,
-            Request::PlaylistCreate(pl_in) => playlist::playlist_create(&writer, &state, pl_in).await,
+            Request::PlaylistCreate(pl_in) => {
+                playlist::playlist_create(&writer, &state, pl_in).await
+            }
             Request::Next(n) => next_prev::next(&writer, &state, n).await,
             Request::Prev(n) => next_prev::prev(&writer, &state, n).await,
             Request::Pause => pause::pause(&writer, &state).await,
@@ -95,15 +96,18 @@ pub async fn handle_client(
             Request::RemoveSongAt(index) => remove_song_at::remove_song_at(&state, index).await,
             Request::MoveQueue { from, to } => move_queue::move_queue(&state, from, to).await,
             Request::PlaylistDelete(id) => playlist::playlist_delete(&writer, &state, id).await,
-            Request::PlaylistAddSongs { playlist_id, song_ids } => {
-                playlist::playlist_add_songs(&writer, &state, playlist_id, song_ids).await
-            }
-            Request::PlaylistRemoveSong { playlist_id, song_id } => {
-                playlist::playlist_remove_song(&writer, &state, playlist_id, song_id).await
-            }
-            Request::PlaylistRename { playlist_id, new_title } => {
-                playlist::playlist_rename(&writer, &state, playlist_id, new_title).await
-            }
+            Request::PlaylistAddSongs {
+                playlist_id,
+                song_ids,
+            } => playlist::playlist_add_songs(&writer, &state, playlist_id, song_ids).await,
+            Request::PlaylistRemoveSong {
+                playlist_id,
+                song_id,
+            } => playlist::playlist_remove_song(&writer, &state, playlist_id, song_id).await,
+            Request::PlaylistRename {
+                playlist_id,
+                new_title,
+            } => playlist::playlist_rename(&writer, &state, playlist_id, new_title).await,
             Request::SetVolume(v) => settings::set_volume(&writer, &state, v).await,
             Request::SetShuffle(b) => settings::set_shuffle(&writer, &state, b).await,
             Request::SetRepeat(r) => settings::set_repeat(&writer, &state, r).await,

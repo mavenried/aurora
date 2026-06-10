@@ -15,7 +15,7 @@ use uuid::Uuid;
 use walkdir::WalkDir;
 
 use crate::{
-    helpers::db::{to_io, Db},
+    helpers::db::{Db, to_io},
     types::SongIndex,
 };
 
@@ -131,9 +131,7 @@ pub async fn build_index(music_dir: &PathBuf, db: &Db) -> std::io::Result<SongIn
     let cache: HashMap<String, CachedEntry> = tokio::task::spawn_blocking(move || {
         let conn = db_clone.lock().unwrap();
         let mut stmt = conn
-            .prepare(
-                "SELECT id, path, title, artists, dur_ms, mtime, art_path FROM songs",
-            )
+            .prepare("SELECT id, path, title, artists, dur_ms, mtime, art_path FROM songs")
             .map_err(to_io)?;
 
         let mut map: HashMap<String, CachedEntry> = HashMap::new();
@@ -146,7 +144,17 @@ pub async fn build_index(music_dir: &PathBuf, db: &Db) -> std::io::Result<SongIn
                 let dur_ms: i64 = row.get(4)?;
                 let mtime: i64 = row.get(5)?;
                 let art_path: Option<String> = row.get(6)?;
-                Ok((path, CachedEntry { id, title, artists_json, dur_ms, mtime, art_path }))
+                Ok((
+                    path,
+                    CachedEntry {
+                        id,
+                        title,
+                        artists_json,
+                        dur_ms,
+                        mtime,
+                        art_path,
+                    },
+                ))
             })
             .map_err(to_io)?;
 
@@ -212,8 +220,7 @@ pub async fn build_index(music_dir: &PathBuf, db: &Db) -> std::io::Result<SongIn
         let existing_art = cache.get(&path_str).and_then(|c| c.art_path.clone());
 
         if let Some((title, artists, duration)) = read_tags(path) {
-            let artists_json =
-                serde_json::to_string(&artists).unwrap_or_else(|_| "[]".to_string());
+            let artists_json = serde_json::to_string(&artists).unwrap_or_else(|_| "[]".to_string());
             let dur_ms = duration.as_millis() as i64;
 
             to_upsert.push(UpsertEntry {

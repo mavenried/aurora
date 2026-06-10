@@ -53,7 +53,10 @@ impl StateStruct {
                     .art_paths
                     .iter()
                     .take(4)
-                    .filter_map(|opt| opt.as_ref().and_then(|p| Image::load_from_path(p.as_path()).ok()))
+                    .filter_map(|opt| {
+                        opt.as_ref()
+                            .and_then(|p| Image::load_from_path(p.as_path()).ok())
+                    })
                     .collect();
                 songs.push(PlaylistMinimal {
                     title: playlist.name.clone().into(),

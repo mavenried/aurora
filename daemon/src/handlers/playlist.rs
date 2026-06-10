@@ -149,11 +149,7 @@ pub async fn playlist_add_songs(
     Ok(())
 }
 
-pub async fn playlist_get(
-    stream: &WriteSocket,
-    state: &State,
-    id: Uuid,
-) -> anyhow::Result<()> {
+pub async fn playlist_get(stream: &WriteSocket, state: &State, id: Uuid) -> anyhow::Result<()> {
     let mut state = state.lock().await;
     match state.get_playlist(id).await {
         Ok(playlist) => {

@@ -74,12 +74,18 @@ pub async fn init(state: State) -> anyhow::Result<()> {
             }
             PlayerCommand::SeekAbsolute(pos) => {
                 let mut sl = state.lock().await;
-                if let Some(audio) = &mut sl.audio && !pos.is_negative() {
+                if let Some(audio) = &mut sl.audio
+                    && !pos.is_negative()
+                {
                     audio.seek(Duration::from_micros(pos.as_micros() as u64));
                 }
             }
             PlayerCommand::SetVolume(vol) => {
-                state.lock().await.sink.set_volume(vol.clamp(0.0, 1.0) as f32);
+                state
+                    .lock()
+                    .await
+                    .sink
+                    .set_volume(vol.clamp(0.0, 1.0) as f32);
             }
         }
     }
@@ -87,7 +93,10 @@ pub async fn init(state: State) -> anyhow::Result<()> {
     Ok(())
 }
 
-pub async fn controller(cmd_tx: UnboundedSender<PlayerCommand>, state: State) -> anyhow::Result<()> {
+pub async fn controller(
+    cmd_tx: UnboundedSender<PlayerCommand>,
+    state: State,
+) -> anyhow::Result<()> {
     let player = Player::builder("me.mavenried.Aurora")
         .identity("Aurora")
         .can_play(true)
@@ -185,11 +194,9 @@ pub async fn controller(cmd_tx: UnboundedSender<PlayerCommand>, state: State) ->
                 last_paused = None; // force status re-emit after song change
 
                 if let Some((id, title, artists, duration, art_path)) = song_snapshot {
-                    let track_id = TrackId::try_from(format!(
-                        "/me/mavenried/Aurora/track/{}",
-                        id.simple()
-                    ))
-                    .unwrap_or(TrackId::NO_TRACK);
+                    let track_id =
+                        TrackId::try_from(format!("/me/mavenried/Aurora/track/{}", id.simple()))
+                            .unwrap_or(TrackId::NO_TRACK);
 
                     let mut meta = Metadata::new();
                     meta.set_trackid(Some(track_id));
@@ -226,8 +233,7 @@ pub async fn controller(cmd_tx: UnboundedSender<PlayerCommand>, state: State) ->
 
             // Emit Seeked when position jumps more than 1.5 s from where it should be
             let elapsed_us = last_tick.elapsed().as_micros() as i64;
-            let expected_us = last_position.as_micros()
-                + if is_paused { 0 } else { elapsed_us };
+            let expected_us = last_position.as_micros() + if is_paused { 0 } else { elapsed_us };
             let diff = (position.as_micros() - expected_us).unsigned_abs();
             if diff > 1_500_000 {
                 let _ = player.seeked(position).await;

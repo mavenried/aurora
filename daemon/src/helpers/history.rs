@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 use uuid::Uuid;
 
-use crate::helpers::db::{to_io, Db};
+use crate::helpers::db::{Db, to_io};
 
 const MAX_HISTORY: usize = 30;
 
@@ -10,9 +10,7 @@ pub async fn load_history(db: &Db) -> std::io::Result<VecDeque<Uuid>> {
     tokio::task::spawn_blocking(move || {
         let conn = db.lock().unwrap();
         let mut stmt = conn
-            .prepare(
-                "SELECT song_id FROM history ORDER BY played_at DESC LIMIT 30",
-            )
+            .prepare("SELECT song_id FROM history ORDER BY played_at DESC LIMIT 30")
             .map_err(to_io)?;
         let rows = stmt
             .query_map([], |row| {

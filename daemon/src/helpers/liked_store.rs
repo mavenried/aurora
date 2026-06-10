@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 use uuid::Uuid;
 
-use crate::helpers::db::{to_io, Db};
+use crate::helpers::db::{Db, to_io};
 
 pub async fn load_liked(db: &Db) -> std::io::Result<HashSet<Uuid>> {
     let db = db.clone();

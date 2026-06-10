@@ -16,11 +16,7 @@ pub async fn like_song(stream: &WriteSocket, state: &State, song_id: Uuid) -> an
     get_liked_songs(stream, state).await
 }
 
-pub async fn unlike_song(
-    stream: &WriteSocket,
-    state: &State,
-    song_id: Uuid,
-) -> anyhow::Result<()> {
+pub async fn unlike_song(stream: &WriteSocket, state: &State, song_id: Uuid) -> anyhow::Result<()> {
     let db = {
         let mut s = state.lock().await;
         s.liked_ids.remove(&song_id);

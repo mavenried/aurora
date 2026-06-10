@@ -35,16 +35,14 @@ pub async fn init(state: State) {
     loop {
         // Drain events with a short timeout to implement debounce
         match tokio::time::timeout(Duration::from_millis(500), rx.recv()).await {
-            Ok(Some(Ok(event))) => {
-                match event.kind {
-                    EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_) => {
-                        tracing::debug!("File watcher event: {:?}", event.kind);
-                        last_event = Instant::now();
-                        pending = true;
-                    }
-                    _ => {}
+            Ok(Some(Ok(event))) => match event.kind {
+                EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_) => {
+                    tracing::debug!("File watcher event: {:?}", event.kind);
+                    last_event = Instant::now();
+                    pending = true;
                 }
-            }
+                _ => {}
+            },
             Ok(Some(Err(e))) => {
                 tracing::warn!("File watcher error: {e}");
             }

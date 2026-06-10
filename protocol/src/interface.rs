@@ -11,9 +11,18 @@ pub enum Request {
     PlaylistGet(Uuid),
     PlaylistCreate(PlaylistIn),
     PlaylistDelete(Uuid),
-    PlaylistAddSongs { playlist_id: Uuid, song_ids: Vec<Uuid> },
-    PlaylistRemoveSong { playlist_id: Uuid, song_id: Uuid },
-    PlaylistRename { playlist_id: Uuid, new_title: String },
+    PlaylistAddSongs {
+        playlist_id: Uuid,
+        song_ids: Vec<Uuid>,
+    },
+    PlaylistRemoveSong {
+        playlist_id: Uuid,
+        song_id: Uuid,
+    },
+    PlaylistRename {
+        playlist_id: Uuid,
+        new_title: String,
+    },
     Clear,
     Next(usize),
     Prev(usize),
@@ -23,7 +32,10 @@ pub enum Request {
     ReplaceQueue(Vec<Uuid>),
     RemoveSong(Uuid),
     RemoveSongAt(usize),
-    MoveQueue { from: usize, to: usize },
+    MoveQueue {
+        from: usize,
+        to: usize,
+    },
     SetVolume(f32),
     SetShuffle(bool),
     SetRepeat(u8),

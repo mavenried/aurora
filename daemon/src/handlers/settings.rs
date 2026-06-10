@@ -74,7 +74,9 @@ pub async fn get_last_played(writer: &WriteSocket, state: &State) -> anyhow::Res
         .collect();
 
     if !missing.is_empty() {
-        state_locked.recently_played.retain(|id| !missing.contains(id));
+        state_locked
+            .recently_played
+            .retain(|id| !missing.contains(id));
         let history = state_locked.recently_played.clone();
         let db = state_locked.db.clone();
         tokio::spawn(async move {

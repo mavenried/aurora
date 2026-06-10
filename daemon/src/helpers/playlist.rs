@@ -3,7 +3,7 @@ use std::io::Result;
 use uuid::Uuid;
 
 use crate::{
-    helpers::db::{to_io, Db},
+    helpers::db::{Db, to_io},
     types::StateStruct,
 };
 
@@ -128,11 +128,7 @@ impl StateStruct {
             for s in &art_id_strs {
                 if let Ok(song_id) = Uuid::parse_str(s) {
                     self.get_art(song_id);
-                    art_paths.push(
-                        self.index
-                            .get(&song_id)
-                            .and_then(|m| m.art_path.clone()),
-                    );
+                    art_paths.push(self.index.get(&song_id).and_then(|m| m.art_path.clone()));
                 }
             }
             result.push(PlaylistMinimal {
@@ -196,11 +192,7 @@ pub async fn delete_playlist(db: &Db, playlist_id: Uuid) -> Result<()> {
     .map_err(to_io)?
 }
 
-pub async fn remove_song_from_playlist(
-    db: &Db,
-    playlist_id: Uuid,
-    song_id: Uuid,
-) -> Result<()> {
+pub async fn remove_song_from_playlist(db: &Db, playlist_id: Uuid, song_id: Uuid) -> Result<()> {
     let db = db.clone();
     let playlist_id_str = playlist_id.to_string();
     let song_id_str = song_id.to_string();
@@ -217,11 +209,7 @@ pub async fn remove_song_from_playlist(
     .map_err(to_io)?
 }
 
-pub async fn add_songs_to_playlist(
-    db: &Db,
-    playlist_id: Uuid,
-    song_ids: Vec<Uuid>,
-) -> Result<()> {
+pub async fn add_songs_to_playlist(db: &Db, playlist_id: Uuid, song_ids: Vec<Uuid>) -> Result<()> {
     let db = db.clone();
     let playlist_id_str = playlist_id.to_string();
     tokio::task::spawn_blocking(move || {

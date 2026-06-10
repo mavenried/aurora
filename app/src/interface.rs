@@ -82,7 +82,10 @@ async fn unix_recver(
                 let song_changed = current_id != state_locked.current_song_id;
                 state_locked.current_song_id = current_id.clone();
 
-                let new_art_path = status.current_song.as_ref().and_then(|s| s.art_path.clone());
+                let new_art_path = status
+                    .current_song
+                    .as_ref()
+                    .and_then(|s| s.art_path.clone());
                 let art_changed = new_art_path != state_locked.current_art_path;
                 if art_changed {
                     state_locked.current_art_path = new_art_path.clone();
@@ -233,8 +236,8 @@ async fn unix_recver(
                 state_locked.artist_list = list.clone();
                 drop(state_locked);
                 let _ = app.upgrade_in_event_loop(move |aurora| {
-                    use std::rc::Rc;
                     use slint::{ModelRc, VecModel};
+                    use std::rc::Rc;
                     let items: Vec<slint::SharedString> =
                         list.iter().map(|s| s.as_str().into()).collect();
                     aurora.set_artist_list(ModelRc::new(Rc::new(VecModel::from(items))));
@@ -355,7 +358,10 @@ pub async fn interface(app: slint::Weak<AuroraPlayer>) -> anyhow::Result<()> {
         aurora.on_queue_move(move |from, to| {
             let state = state.clone();
             tokio::spawn(async move {
-                let req = Request::MoveQueue { from: from as usize, to: to as usize };
+                let req = Request::MoveQueue {
+                    from: from as usize,
+                    to: to as usize,
+                };
                 let _ = state.lock().await.writer_tx.send(req).await;
             });
         });
@@ -411,7 +417,9 @@ pub async fn interface(app: slint::Weak<AuroraPlayer>) -> anyhow::Result<()> {
         let state = state_clone.clone();
         aurora.on_add(move |id| {
             let state = state.clone();
-            let Ok(id) = uuid::Uuid::parse_str(&id) else { return };
+            let Ok(id) = uuid::Uuid::parse_str(&id) else {
+                return;
+            };
             tokio::spawn(async move {
                 let _ = state.lock().await.writer_tx.send(Request::Play(id)).await;
             });
@@ -425,11 +433,15 @@ pub async fn interface(app: slint::Weak<AuroraPlayer>) -> anyhow::Result<()> {
                 let (ids, writer_tx) = {
                     let state_locked = state.lock().await;
                     let ids: Vec<uuid::Uuid> = if state_locked.selected_song_ids.contains(&id_str) {
-                        state_locked.selected_song_ids.iter()
+                        state_locked
+                            .selected_song_ids
+                            .iter()
                             .filter_map(|s| uuid::Uuid::parse_str(s).ok())
                             .collect()
                     } else {
-                        uuid::Uuid::parse_str(&id_str).map(|id| vec![id]).unwrap_or_default()
+                        uuid::Uuid::parse_str(&id_str)
+                            .map(|id| vec![id])
+                            .unwrap_or_default()
                     };
                     (ids, state_locked.writer_tx.clone())
                 };
@@ -447,11 +459,15 @@ pub async fn interface(app: slint::Weak<AuroraPlayer>) -> anyhow::Result<()> {
                 let (ids, writer_tx) = {
                     let state_locked = state.lock().await;
                     let ids: Vec<uuid::Uuid> = if state_locked.selected_song_ids.contains(&id_str) {
-                        state_locked.selected_song_ids.iter()
+                        state_locked
+                            .selected_song_ids
+                            .iter()
                             .filter_map(|s| uuid::Uuid::parse_str(s).ok())
                             .collect()
                     } else {
-                        uuid::Uuid::parse_str(&id_str).map(|id| vec![id]).unwrap_or_default()
+                        uuid::Uuid::parse_str(&id_str)
+                            .map(|id| vec![id])
+                            .unwrap_or_default()
                     };
                     (ids, state_locked.writer_tx.clone())
                 };
@@ -557,7 +573,10 @@ pub async fn interface(app: slint::Weak<AuroraPlayer>) -> anyhow::Result<()> {
                             .lock()
                             .await
                             .writer_tx
-                            .send(Request::PlaylistRename { playlist_id, new_title })
+                            .send(Request::PlaylistRename {
+                                playlist_id,
+                                new_title,
+                            })
                             .await;
                     }
                 });
@@ -585,7 +604,10 @@ pub async fn interface(app: slint::Weak<AuroraPlayer>) -> anyhow::Result<()> {
             tokio::spawn(async move {
                 let (ids, writer_tx) = {
                     let state_locked = state.lock().await;
-                    let ids: Vec<String> = if state_locked.selected_song_ids.contains(song_id_str.as_str()) {
+                    let ids: Vec<String> = if state_locked
+                        .selected_song_ids
+                        .contains(song_id_str.as_str())
+                    {
                         state_locked.selected_song_ids.iter().cloned().collect()
                     } else {
                         vec![song_id_str.to_string()]
@@ -595,7 +617,12 @@ pub async fn interface(app: slint::Weak<AuroraPlayer>) -> anyhow::Result<()> {
                 if let Ok(playlist_id) = uuid::Uuid::parse_str(&playlist_id_str) {
                     for id_str in &ids {
                         if let Ok(song_id) = uuid::Uuid::parse_str(id_str) {
-                            let _ = writer_tx.send(Request::PlaylistRemoveSong { playlist_id, song_id }).await;
+                            let _ = writer_tx
+                                .send(Request::PlaylistRemoveSong {
+                                    playlist_id,
+                                    song_id,
+                                })
+                                .await;
                         }
                     }
                 }
@@ -608,7 +635,10 @@ pub async fn interface(app: slint::Weak<AuroraPlayer>) -> anyhow::Result<()> {
             tokio::spawn(async move {
                 let (song_ids, writer_tx) = {
                     let state_locked = state.lock().await;
-                    let song_ids: Vec<uuid::Uuid> = if state_locked.selected_song_ids.contains(primary_song_id.as_str()) {
+                    let song_ids: Vec<uuid::Uuid> = if state_locked
+                        .selected_song_ids
+                        .contains(primary_song_id.as_str())
+                    {
                         state_locked
                             .selected_song_ids
                             .iter()
@@ -623,7 +653,10 @@ pub async fn interface(app: slint::Weak<AuroraPlayer>) -> anyhow::Result<()> {
                 };
                 if let Ok(playlist_id) = uuid::Uuid::parse_str(&playlist_id_str) {
                     let _ = writer_tx
-                        .send(Request::PlaylistAddSongs { playlist_id, song_ids })
+                        .send(Request::PlaylistAddSongs {
+                            playlist_id,
+                            song_ids,
+                        })
                         .await;
                 }
             });
@@ -633,7 +666,12 @@ pub async fn interface(app: slint::Weak<AuroraPlayer>) -> anyhow::Result<()> {
         aurora.on_set_shuffle(move |b| {
             let state = state.clone();
             tokio::spawn(async move {
-                let _ = state.lock().await.writer_tx.send(Request::SetShuffle(b)).await;
+                let _ = state
+                    .lock()
+                    .await
+                    .writer_tx
+                    .send(Request::SetShuffle(b))
+                    .await;
             });
         });
 
@@ -641,7 +679,12 @@ pub async fn interface(app: slint::Weak<AuroraPlayer>) -> anyhow::Result<()> {
         aurora.on_set_repeat(move |r| {
             let state = state.clone();
             tokio::spawn(async move {
-                let _ = state.lock().await.writer_tx.send(Request::SetRepeat(r as u8)).await;
+                let _ = state
+                    .lock()
+                    .await
+                    .writer_tx
+                    .send(Request::SetRepeat(r as u8))
+                    .await;
             });
         });
 
@@ -649,7 +692,12 @@ pub async fn interface(app: slint::Weak<AuroraPlayer>) -> anyhow::Result<()> {
         aurora.on_set_volume(move |v| {
             let state = state.clone();
             tokio::spawn(async move {
-                let _ = state.lock().await.writer_tx.send(Request::SetVolume(v)).await;
+                let _ = state
+                    .lock()
+                    .await
+                    .writer_tx
+                    .send(Request::SetVolume(v))
+                    .await;
             });
         });
 
@@ -657,7 +705,12 @@ pub async fn interface(app: slint::Weak<AuroraPlayer>) -> anyhow::Result<()> {
         aurora.on_get_artist_list(move || {
             let state = state.clone();
             tokio::spawn(async move {
-                let _ = state.lock().await.writer_tx.send(Request::GetArtistList).await;
+                let _ = state
+                    .lock()
+                    .await
+                    .writer_tx
+                    .send(Request::GetArtistList)
+                    .await;
             });
         });
 
@@ -669,11 +722,15 @@ pub async fn interface(app: slint::Weak<AuroraPlayer>) -> anyhow::Result<()> {
                 let (ids, writer_tx) = {
                     let state_locked = state.lock().await;
                     let ids: Vec<uuid::Uuid> = if state_locked.selected_song_ids.contains(&id_str) {
-                        state_locked.selected_song_ids.iter()
+                        state_locked
+                            .selected_song_ids
+                            .iter()
                             .filter_map(|s| uuid::Uuid::parse_str(s).ok())
                             .collect()
                     } else {
-                        uuid::Uuid::parse_str(&id_str).map(|u| vec![u]).unwrap_or_default()
+                        uuid::Uuid::parse_str(&id_str)
+                            .map(|u| vec![u])
+                            .unwrap_or_default()
                     };
                     (ids, state_locked.writer_tx.clone())
                 };
@@ -691,11 +748,15 @@ pub async fn interface(app: slint::Weak<AuroraPlayer>) -> anyhow::Result<()> {
                 let (ids, writer_tx) = {
                     let state_locked = state.lock().await;
                     let ids: Vec<uuid::Uuid> = if state_locked.selected_song_ids.contains(&id_str) {
-                        state_locked.selected_song_ids.iter()
+                        state_locked
+                            .selected_song_ids
+                            .iter()
                             .filter_map(|s| uuid::Uuid::parse_str(s).ok())
                             .collect()
                     } else {
-                        uuid::Uuid::parse_str(&id_str).map(|u| vec![u]).unwrap_or_default()
+                        uuid::Uuid::parse_str(&id_str)
+                            .map(|u| vec![u])
+                            .unwrap_or_default()
                     };
                     (ids, state_locked.writer_tx.clone())
                 };
@@ -709,7 +770,12 @@ pub async fn interface(app: slint::Weak<AuroraPlayer>) -> anyhow::Result<()> {
         aurora.on_get_liked_songs(move || {
             let state = state.clone();
             tokio::spawn(async move {
-                let _ = state.lock().await.writer_tx.send(Request::GetLikedSongs).await;
+                let _ = state
+                    .lock()
+                    .await
+                    .writer_tx
+                    .send(Request::GetLikedSongs)
+                    .await;
             });
         });
 
@@ -717,7 +783,12 @@ pub async fn interface(app: slint::Weak<AuroraPlayer>) -> anyhow::Result<()> {
         aurora.on_get_last_played(move || {
             let state = state.clone();
             tokio::spawn(async move {
-                let _ = state.lock().await.writer_tx.send(Request::GetLastPlayed).await;
+                let _ = state
+                    .lock()
+                    .await
+                    .writer_tx
+                    .send(Request::GetLastPlayed)
+                    .await;
             });
         });
 
@@ -730,7 +801,9 @@ pub async fn interface(app: slint::Weak<AuroraPlayer>) -> anyhow::Result<()> {
                 state_locked.pending_artist_search = true;
                 let _ = state_locked
                     .writer_tx
-                    .send(Request::Search(aurora_protocol::SearchType::ByArtist(artist_str)))
+                    .send(Request::Search(aurora_protocol::SearchType::ByArtist(
+                        artist_str,
+                    )))
                     .await;
             });
         });
