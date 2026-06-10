@@ -4,10 +4,12 @@ import { Song, PlaylistMinimal, Playlist, Theme } from "Types.slint";
 
 export component LibraryView inherits VerticalBox {
     in property <[Song]> liked-songs;
+    in property <[Song]> last-played;
     in property <[PlaylistMinimal]> playlists;
     in property <Playlist> current-playlist;
     in property <string> current-song-id;
     in-out property <bool> in-playlist: false;
+    property <bool> in-liked: false;
 
     callback item-clicked(string);
     callback show-context-menu(string, bool, length, length);
@@ -23,319 +25,548 @@ export component LibraryView inherits VerticalBox {
     in-out property <string> new-playlist-name: "";
     in-out property <string> renaming-playlist-id: "";
 
-    padding: 5px;
+    padding: 0px;
     spacing: 0px;
 
     Rectangle {
-        // Main view: liked songs + playlists
+        // ── Main overview ────────────────────────────────────────────
         VerticalLayout {
             states [
-                visible when !in-playlist: {
+                visible when !in-playlist && !in-liked: {
                     opacity: 1;
                     visible: true;
-                    in-out { animate opacity { duration: 100ms; } }
+                    in-out {
+                        animate opacity { duration: 100ms; }
+                    }
                 }
-                invisible when in-playlist: {
+                invisible when in-playlist || in-liked: {
                     opacity: 0;
                     visible: false;
-                    in-out { animate opacity { duration: 100ms; } }
+                    in-out {
+                        animate opacity { duration: 100ms; }
+                    }
                 }
             ]
-            spacing: 10px;
+            spacing: 0px;
             padding: 0px;
 
-            VerticalLayout {
-                vertical-stretch: 1;
+            HorizontalLayout {
                 spacing: 5px;
+                padding: 0px;
+
+                if last-played.length > 0: Rectangle {
+                    background: Theme.bgd2;
+                    border-radius: 15px;
+                    clip: true;
+                    width: 330px;
+
+                    VerticalLayout {
+                        padding: 0px;
+                        spacing: 5px;
+
+                        HorizontalLayout {
+                            height: 40px;
+                            padding: 10px;
+                            alignment: space-between;
+                            Text {
+                                text: "\u{f017} Recently Played";
+                                color: Theme.txt1;
+                                font-size: 20px;
+                                vertical-alignment: center;
+                                font-family: "JetBrainsMono NFP";
+                            }
+
+                            Text {
+                                private property <int> cnt: last-played.length;
+                                text: cnt + " songs";
+                                color: Theme.txt2;
+                                font-size: 14px;
+                                vertical-alignment: center;
+                                horizontal-alignment: right;
+                            }
+                        }
+
+                        SongList {
+                            items: last-played;
+                            current-song-id: root.current-song-id;
+                            item-clicked(id) => {
+                                item-clicked(id);
+                            }
+                            show-context-menu(id, liked, x, y) => {
+                                show-context-menu(id, liked, x, y);
+                            }
+                            toggle-selection(id) => {
+                                toggle-song-selection(id);
+                            }
+                            toggle-liked(id, liked) => {
+                                toggle-liked(id, liked);
+                            }
+                        }
+                    }
+                }
+
+                Rectangle {
+                    background: Theme.bgd2;
+                    border-radius: 15px;
+                    clip: true;
+                    horizontal-stretch: 1;
+
+                    VerticalLayout {
+                        padding: 6px;
+                        spacing: 5px;
+
+                        HorizontalLayout {
+                            height: 40px;
+                            padding: 10px;
+                            alignment: space-between;
+                            Text {
+                                text: "\u{f0cb8} Playlists";
+                                font-family: "JetBrainsMono NFP";
+                                color: Theme.txt1;
+                                font-size: 24px;
+                                vertical-alignment: center;
+                            }
+
+                            Text {
+                                private property <int> cnt: playlists.length;
+                                text: cnt + " playlists";
+                                color: Theme.txt2;
+                                font-size: 14px;
+                                vertical-alignment: center;
+                                horizontal-alignment: right;
+                            }
+                        }
+
+                        PlList {
+                            liked-count: liked-songs.length;
+                            items: playlists;
+                            item-clicked(id) => {
+                                get-playlist(id);
+                                in-playlist = true;
+                            }
+                            show-context-menu(id, title, x, y) => {
+                                show-playlist-context-menu(id, title, x, y);
+                            }
+                            liked-clicked => {
+                                in-liked = true;
+                            }
+                        }
+                    }
+
+                    // Expandable create/rename pill — compact "+" expands to fill the pane
+                    Rectangle {
+                        private property <bool> input-visible: creating-playlist || renaming-playlist-id != "";
+                        visible: !in-playlist && !in-liked;
+                        x: input-visible ? 8px : parent.width - 58px;
+                        y: parent.height - 58px;
+                        width: input-visible ? parent.width - 16px : 50px;
+                        height: 50px;
+                        border-radius: 10px;
+                        background: input-visible ? Theme.bgd1 : (btn-ta.has-hover ? Theme.bgd3 : Theme.bgd1);
+                        animate width { duration: 200ms; easing: ease-in-out-quad; }
+                        animate x { duration: 200ms; easing: ease-in-out-quad; }
+                        animate background { duration: 100ms; }
+
+                        btn-ta := TouchArea {
+                            enabled: !input-visible;
+                            clicked => {
+                                renaming-playlist-id = "";
+                                creating-playlist = true;
+                            }
+                        }
+                        Text {
+                            visible: !input-visible;
+                            text: "+";
+                            color: Theme.acct;
+                            font-size: 28px;
+                            width: parent.width;
+                            height: parent.height;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+
+                        HorizontalLayout {
+                            visible: input-visible;
+                            padding: 5px;
+                            spacing: 5px;
+
+                            Rectangle {
+                                background: Theme.bgd2;
+                                border-radius: 8px;
+                                clip: true;
+                                HorizontalLayout {
+                                    padding: 8px;
+                                    TextInput {
+                                        font-size: 16px;
+                                        color: Theme.txt1;
+                                        vertical-alignment: center;
+                                        text <=> new-playlist-name;
+                                        accepted => {
+                                            if new-playlist-name != "" {
+                                                if creating-playlist {
+                                                    create-playlist(new-playlist-name);
+                                                    creating-playlist = false;
+                                                } else if renaming-playlist-id != "" {
+                                                    rename-playlist(renaming-playlist-id, new-playlist-name);
+                                                    renaming-playlist-id = "";
+                                                }
+                                                new-playlist-name = "";
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            Rectangle {
+                                width: 40px;
+                                border-radius: 8px;
+                                background: confirm-ta.has-hover ? Theme.acct : Theme.bgd3;
+                                animate background { duration: 100ms; }
+                                Text {
+                                    text: "\u{f00c}";
+                                    font-family: "JetBrainsMono NFP";
+                                    color: Theme.txt2;
+                                    font-size: 18px;
+                                    horizontal-alignment: center;
+                                    vertical-alignment: center;
+                                }
+                                confirm-ta := TouchArea {
+                                    clicked => {
+                                        if new-playlist-name != "" {
+                                            if creating-playlist {
+                                                create-playlist(new-playlist-name);
+                                                creating-playlist = false;
+                                            } else if renaming-playlist-id != "" {
+                                                rename-playlist(renaming-playlist-id, new-playlist-name);
+                                                renaming-playlist-id = "";
+                                            }
+                                            new-playlist-name = "";
+                                        }
+                                    }
+                                }
+                            }
+
+                            Rectangle {
+                                width: 40px;
+                                border-radius: 8px;
+                                background: cancel-ta.has-hover ? Theme.bgd3 : Theme.bgd2;
+                                animate background { duration: 100ms; }
+                                Text {
+                                    text: "\u{f00d}";
+                                    font-family: "JetBrainsMono NFP";
+                                    color: Theme.txt2;
+                                    font-size: 18px;
+                                    horizontal-alignment: center;
+                                    vertical-alignment: center;
+                                }
+                                cancel-ta := TouchArea {
+                                    clicked => {
+                                        creating-playlist = false;
+                                        renaming-playlist-id = "";
+                                        new-playlist-name = "";
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // ── Liked songs detail ────────────────────────────────────────
+        Rectangle {
+            states [
+                visible when in-liked: {
+                    opacity: 1;
+                    visible: true;
+                    in-out {
+                        animate opacity { duration: 100ms; }
+                    }
+                }
+                invisible when !in-liked: {
+                    opacity: 0;
+                    visible: false;
+                    in-out {
+                        animate opacity { duration: 100ms; }
+                    }
+                }
+            ]
+            background: Theme.bgd2;
+            border-radius: 15px;
+
+            VerticalLayout {
+                spacing: 10px;
+                padding: 10px;
 
                 HorizontalLayout {
-                    height: 35px;
                     padding: 0px;
-                    alignment: space-between;
-                    Text {
-                        text: "\u{2665} Liked Songs";
-                        color: Theme.acct;
-                        font-size: 20px;
-                        vertical-alignment: center;
+                    height: 60px;
+                    spacing: 5px;
+
+                    Rectangle {
+                        height: parent.height;
+                        width: parent.height;
+                        background: liked-back-ta.has-hover ? Theme.bgd0 : Theme.bgd1;
+                        animate background { duration: 200ms; }
+                        border-radius: 10px;
+                        Text {
+                            text: "\u{f060}";
+                            font-family: "JetBrainsMono NFP";
+                            font-size: 40px;
+                            color: Theme.txt1;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+
+                        liked-back-ta := TouchArea {
+                            clicked => {
+                                in-liked = false;
+                            }
+                        }
                     }
-                    Text {
-                        private property <int> cnt: liked-songs.length;
-                        text: cnt + " songs";
-                        color: Theme.txt2;
-                        font-size: 14px;
-                        vertical-alignment: center;
-                        horizontal-alignment: right;
+
+                    Rectangle {
+                        height: parent.height;
+                        width: parent.height;
+                        background: liked-play-ta.has-hover ? Theme.bgd0 : Theme.bgd1;
+                        animate background { duration: 200ms; }
+                        border-radius: 10px;
+                        Text {
+                            text: "\u{f04b}";
+                            font-family: "JetBrainsMono NFP";
+                            font-size: 32px;
+                            color: Theme.txt1;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+
+                        liked-play-ta := TouchArea {
+                            clicked => {
+                                replace-queue({ id: "", title: "Liked Songs", songs: root.liked-songs });
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        background: Theme.bgd1;
+                        border-radius: 10px;
+                        HorizontalLayout {
+                            padding: 10px;
+                            padding-right: 20px;
+                            padding-left: 20px;
+                            alignment: space-between;
+                            Text {
+                                text: "\u{f004} Liked Songs";
+                                font-family: "JetBrainsMono NFP";
+                                color: Theme.acct;
+                                font-size: 28px;
+                                vertical-alignment: center;
+                            }
+
+                            Text {
+                                private property <int> cnt: liked-songs.length;
+                                text: cnt + (cnt == 1 ? " song" : " songs");
+                                color: Theme.txt2;
+                                font-size: 18px;
+                                vertical-alignment: center;
+                                horizontal-alignment: right;
+                            }
+                        }
                     }
                 }
 
                 SongList {
                     items: liked-songs;
                     current-song-id: root.current-song-id;
-                    item-clicked(id) => { item-clicked(id); }
-                    show-context-menu(id, liked, x, y) => { show-context-menu(id, liked, x, y); }
-                    toggle-selection(id) => { toggle-song-selection(id); }
-                    toggle-liked(id, liked) => { toggle-liked(id, liked); }
-                }
-            }
-
-            VerticalLayout {
-                vertical-stretch: 2;
-                spacing: 5px;
-
-                HorizontalLayout {
-                    height: 35px;
-                    padding: 0px;
-                    alignment: space-between;
-                    Text {
-                        text: "Playlists";
-                        color: Theme.txt1;
-                        font-size: 20px;
-                        vertical-alignment: center;
-                    }
-                    Text {
-                        private property <int> cnt: playlists.length;
-                        text: cnt + " playlists";
-                        color: Theme.txt2;
-                        font-size: 14px;
-                        vertical-alignment: center;
-                        horizontal-alignment: right;
-                    }
-                }
-
-                PlList {
-                    items: playlists;
                     item-clicked(id) => {
-                        get-playlist(id);
-                        in-playlist = true;
+                        item-clicked(id);
                     }
-                    show-context-menu(id, title, x, y) => {
-                        show-playlist-context-menu(id, title, x, y);
+                    show-context-menu(id, liked, x, y) => {
+                        show-context-menu(id, liked, x, y);
+                    }
+                    toggle-selection(id) => {
+                        toggle-song-selection(id);
+                    }
+                    toggle-liked(id, liked) => {
+                        toggle-liked(id, liked);
                     }
                 }
             }
         }
 
-        // Playlist detail view
-        VerticalLayout {
+        // ── Playlist detail ───────────────────────────────────────────
+        Rectangle {
             states [
                 visible when in-playlist: {
                     opacity: 1;
                     visible: true;
-                    in-out { animate opacity { duration: 100ms; } }
+                    in-out {
+                        animate opacity { duration: 100ms; }
+                    }
                 }
                 invisible when !in-playlist: {
                     opacity: 0;
                     visible: false;
-                    in-out { animate opacity { duration: 100ms; } }
+                    in-out {
+                        animate opacity { duration: 100ms; }
+                    }
                 }
             ]
-            spacing: 10px;
-            padding: 0px;
+            background: Theme.bgd2;
+            border-radius: 15px;
 
-            HorizontalLayout {
-                padding: 0px;
-                height: 60px;
-                spacing: 5px;
+            VerticalLayout {
+                spacing: 10px;
+                padding: 10px;
 
-                Rectangle {
-                    height: parent.height;
-                    width: parent.height;
-                    background: back-touch.has-hover ? Theme.bgd0 : Theme.bgd1;
-                    animate background { duration: 200ms; }
-                    border-radius: 10px;
-                    Text {
-                        text: "";
-                        font-family: "JetBrainsMono NFP";
-                        font-size: 40px;
-                        color: Theme.txt1;
-                        horizontal-alignment: center;
-                        vertical-alignment: center;
-                    }
-                    back-touch := TouchArea {
-                        clicked => { in-playlist = false; }
-                    }
-                }
-
-                Rectangle {
-                    height: parent.height;
-                    width: parent.height;
-                    background: play-touch.has-hover ? Theme.bgd0 : Theme.bgd1;
-                    animate background { duration: 200ms; }
-                    border-radius: 10px;
-                    Text {
-                        text: "";
-                        font-family: "JetBrainsMono NFP";
-                        font-size: 40px;
-                        color: Theme.txt1;
-                        horizontal-alignment: center;
-                        vertical-alignment: center;
-                    }
-                    play-touch := TouchArea {
-                        clicked => { replace-queue(root.current-playlist); }
-                    }
-                }
-
-                Rectangle {
-                    background: Theme.bgd1;
-                    border-radius: 10px;
-                    HorizontalLayout {
-                        padding: 10px;
-                        padding-right: 20px;
-                        padding-left: 20px;
-                        alignment: space-between;
-                        Text {
-                            text: current-playlist.title;
-                            color: Theme.txt1;
-                            font-size: 28px;
-                            vertical-alignment: center;
-                        }
-                        Text {
-                            private property <int> cnt: current-playlist.songs.length;
-                            text: cnt + (cnt == 1 ? " song" : " songs");
-                            color: Theme.txt2;
-                            font-size: 18px;
-                            vertical-alignment: center;
-                            horizontal-alignment: right;
-                        }
-                    }
-                }
-            }
-
-            SongList {
-                items: current-playlist.songs;
-                current-song-id: root.current-song-id;
-                item-clicked(id) => { item-clicked(id); }
-                show-context-menu(id, liked, x, y) => { show-context-menu(id, liked, x, y); }
-                toggle-selection(id) => { toggle-song-selection(id); }
-                toggle-liked(id, liked) => { toggle-liked(id, liked); }
-            }
-        }
-    }
-
-    Rectangle {
-        height: (!in-playlist && (creating-playlist || renaming-playlist-id != "")) ? 60px : 0px;
-        clip: true;
-        animate height { duration: 150ms; easing: ease-in-out-quad; }
-        background: Theme.bgd1;
-        border-radius: 10px;
-
-        HorizontalLayout {
-            padding: 5px;
-            spacing: 5px;
-
-            Rectangle {
-                background: Theme.bgd2;
-                border-radius: 8px;
-                clip: true;
                 HorizontalLayout {
-                    padding: 10px;
-                    TextInput {
-                        font-size: 18px;
-                        color: Theme.txt1;
-                        vertical-alignment: center;
-                        text <=> new-playlist-name;
-                        accepted => {
-                            if new-playlist-name != "" {
-                                if creating-playlist {
-                                    create-playlist(new-playlist-name);
-                                    creating-playlist = false;
-                                } else if renaming-playlist-id != "" {
-                                    rename-playlist(renaming-playlist-id, new-playlist-name);
-                                    renaming-playlist-id = "";
-                                }
-                                new-playlist-name = "";
+                    padding: 0px;
+                    height: 60px;
+                    spacing: 5px;
+
+                    Rectangle {
+                        height: parent.height;
+                        width: parent.height;
+                        background: back-touch.has-hover ? Theme.bgd0 : Theme.bgd1;
+                        animate background { duration: 200ms; }
+                        border-radius: 10px;
+                        Text {
+                            text: "\u{f060}";
+                            font-family: "JetBrainsMono NFP";
+                            font-size: 40px;
+                            color: Theme.txt1;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+
+                        back-touch := TouchArea {
+                            clicked => {
+                                in-playlist = false;
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        height: parent.height;
+                        width: parent.height;
+                        background: play-touch.has-hover ? Theme.bgd0 : Theme.bgd1;
+                        animate background { duration: 200ms; }
+                        border-radius: 10px;
+                        Text {
+                            text: "\u{f04b}";
+                            font-family: "JetBrainsMono NFP";
+                            font-size: 32px;
+                            color: Theme.txt1;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+
+                        play-touch := TouchArea {
+                            clicked => {
+                                replace-queue(root.current-playlist);
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        background: Theme.bgd1;
+                        border-radius: 10px;
+                        HorizontalLayout {
+                            padding: 10px;
+                            padding-right: 20px;
+                            padding-left: 20px;
+                            alignment: space-between;
+                            Text {
+                                text: current-playlist.title;
+                                color: Theme.txt1;
+                                font-size: 34px;
+                                vertical-alignment: center;
+                            }
+
+                            Text {
+                                private property <int> cnt: current-playlist.songs.length;
+                                text: cnt + (cnt == 1 ? " song" : " songs");
+                                color: Theme.txt2;
+                                font-size: 18px;
+                                vertical-alignment: center;
+                                horizontal-alignment: right;
                             }
                         }
                     }
                 }
-            }
 
-            Rectangle {
-                width: 50px;
-                border-radius: 8px;
-                background: confirm-touch.has-hover ? Theme.acct : Theme.bgd3;
-                animate background { duration: 100ms; }
-                Text {
-                    text: "\u{f00c}";
-                    font-family: "JetBrainsMono NFP";
-                    color: Theme.txt2;
-                    font-size: 20px;
-                    horizontal-alignment: center;
-                    vertical-alignment: center;
-                }
-                confirm-touch := TouchArea {
-                    clicked => {
-                        if new-playlist-name != "" {
-                            if creating-playlist {
-                                create-playlist(new-playlist-name);
-                                creating-playlist = false;
-                            } else if renaming-playlist-id != "" {
-                                rename-playlist(renaming-playlist-id, new-playlist-name);
-                                renaming-playlist-id = "";
-                            }
-                            new-playlist-name = "";
-                        }
+                SongList {
+                    items: current-playlist.songs;
+                    current-song-id: root.current-song-id;
+                    item-clicked(id) => {
+                        item-clicked(id);
                     }
-                }
-            }
-
-            Rectangle {
-                width: 50px;
-                border-radius: 8px;
-                background: cancel-touch.has-hover ? Theme.bgd3 : Theme.bgd2;
-                animate background { duration: 100ms; }
-                Text {
-                    text: "\u{f00d}";
-                    font-family: "JetBrainsMono NFP";
-                    color: Theme.txt2;
-                    font-size: 20px;
-                    horizontal-alignment: center;
-                    vertical-alignment: center;
-                }
-                cancel-touch := TouchArea {
-                    clicked => {
-                        creating-playlist = false;
-                        renaming-playlist-id = "";
-                        new-playlist-name = "";
+                    show-context-menu(id, liked, x, y) => {
+                        show-context-menu(id, liked, x, y);
+                    }
+                    toggle-selection(id) => {
+                        toggle-song-selection(id);
+                    }
+                    toggle-liked(id, liked) => {
+                        toggle-liked(id, liked);
                     }
                 }
             }
         }
+
     }
+}
 
-    Rectangle {
-        height: !in-playlist ? 55px : 0px;
-        clip: true;
-        animate height { duration: 150ms; easing: ease-in-out-quad; }
+export component LibraryPreview inherits Window {
+    width: 1200px;
+    height: 750px;
+    background: Theme.bgd0;
 
-        HorizontalLayout {
-            height: 55px;
-            alignment: end;
-            padding: 0px;
-
-            Rectangle {
-                width: 50px;
-                height: 50px;
-                border-radius: 10px;
-                background: plus-touch.has-hover ? Theme.bgd3 : Theme.bgd1;
-                animate background { duration: 100ms; }
-                Text {
-                    text: "+";
-                    color: Theme.acct;
-                    font-size: 28px;
-                    horizontal-alignment: center;
-                    vertical-alignment: center;
-                }
-                plus-touch := TouchArea {
-                    clicked => {
-                        renaming-playlist-id = "";
-                        creating-playlist = !creating-playlist;
-                        if !creating-playlist {
-                            new-playlist-name = "";
-                        }
-                    }
-                }
-            }
-        }
+    LibraryView {
+        last-played: [
+            { title: "Fallen Hero", artists: "Power Glove", id: "1", duration: "2:59", has_art: false },
+            { title: "Heretics", artists: "Power Glove", id: "2", duration: "3:45", has_art: false },
+            {
+                title: "Arius in the Darkness",
+                artists: "Power Glove",
+                id: "3",
+                duration: "4:10",
+                has_art: false
+            },
+            {
+                title: "Battle for the Devil Kingdom",
+                artists: "Power Glove",
+                id: "4",
+                duration: "3:28",
+                has_art: false
+            },
+            { title: "Constellations", artists: "Pendulum", id: "5", duration: "0:44", has_art: false },
+            {
+                title: "Guiding Lights",
+                artists: "Pendulum, AWO",
+                id: "6",
+                duration: "4:24",
+                has_art: false
+            },
+            { title: "Just Between Us", artists: "natori", id: "7", duration: "4:19", has_art: false },
+            { title: "ユリイカ", artists: "Rokudenashi", id: "8", duration: "3:45", has_art: false },
+            { title: "Birthday Song", artists: "natori", id: "9", duration: "4:10", has_art: false },
+            { title: "Traitor", artists: "Power Glove", id: "10", duration: "3:12", has_art: false },
+        ];
+        playlists: [
+            { title: "Pendulum", id: "p1", length: 13 },
+            { title: "HACHI", id: "p2", length: 50 },
+            { title: "Linkin Park", id: "p3", length: 74 },
+            { title: "Rokudenashi", id: "p4", length: 7 },
+            { title: "JPop", id: "p5", length: 26 },
+            { title: "DMC", id: "p6", length: 25 },
+            { title: "Bring me the...", id: "p7", length: 13 },
+            { title: "Sleep Token", id: "p8", length: 55 },
+            { title: "Abyss - natori", id: "p9", length: 18 },
+        ];
+        liked-songs: [
+            { title: "怪物", artists: "YOASOBI", id: "l1", duration: "3:28", has_art: false },
+            { title: "Fallen Hero", artists: "Power Glove", id: "l2", duration: "2:59", has_art: false },
+        ];
     }
 }

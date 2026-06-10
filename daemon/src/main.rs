@@ -61,17 +61,21 @@ async fn async_main() -> std::io::Result<()> {
             std::process::exit(0);
         }
     });
+
     let Ok(stream_handle) = rodio::OutputStreamBuilder::open_default_stream() else {
         tracing::error!("Could not open a rodio output stream.");
         std::process::exit(1);
     };
     let sink = rodio::Sink::connect_new(stream_handle.mixer());
 
-    helpers::generate_index(&dirs::home_dir().unwrap().join("Music")).await?;
+    let db = helpers::db::open()?;
 
-    let index = helpers::load_index().await?;
-    let recently_played = helpers::load_history().await.unwrap_or_default();
-    let liked_ids = helpers::load_liked().await.unwrap_or_default();
+    let music_dir = dirs::home_dir()
+        .unwrap_or_else(|| PathBuf::from("/root"))
+        .join("Music");
+    let index = helpers::build_index(&music_dir, &db).await?;
+    let recently_played = helpers::load_history(&db).await.unwrap_or_default();
+    let liked_ids = helpers::load_liked(&db).await.unwrap_or_default();
 
     let state = Arc::new(Mutex::new(StateStruct {
         current_song: None,
@@ -86,6 +90,7 @@ async fn async_main() -> std::io::Result<()> {
         repeat: 0,
         recently_played,
         liked_ids,
+        db,
     }));
 
     let state_clone = state.clone();

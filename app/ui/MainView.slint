@@ -3,7 +3,9 @@ import { ComboBox, SongList } from "CustomComp.slint";
 import { Song, PlaylistMinimal, Playlist, Theme, Tabs } from "Types.slint";
 import { LibraryView } from "LibraryView.slint";
 
-export component SearchView inherits VerticalBox {
+export component SearchView inherits Rectangle {
+    background: Theme.bgd2;
+    border-radius: 15px;
     in-out property <string> searchMode: "By Title";
     in-out property <string> query: "";
     in property <[Song]> searchResults;
@@ -13,9 +15,9 @@ export component SearchView inherits VerticalBox {
     callback show-context-menu(string, bool, length, length);
     callback toggle-song-selection(string);
     callback toggle-liked(string, bool);
-    padding: 5px;
 
     VerticalLayout {
+        padding: 5px;
         spacing: 5px;
 
         HorizontalLayout {
@@ -69,32 +71,30 @@ export component SearchView inherits VerticalBox {
         }
 
         if query == "" && searchResults.length == 0: VerticalLayout {
+            vertical-stretch: 1;
             alignment: center;
+            spacing: 15px;
 
-            VerticalLayout {
-                spacing: 15px;
+            Text {
+                text: "\u{f0349}";
+                font-family: "JetBrainsMono NFP";
+                font-size: 64px;
+                color: Theme.txt2;
+                horizontal-alignment: center;
+            }
 
-                Text {
-                    text: "\u{f002}";
-                    font-family: "JetBrainsMono NFP";
-                    font-size: 90px;
-                    color: Theme.bgd3;
-                    horizontal-alignment: center;
-                }
+            Text {
+                text: "Search your library";
+                color: Theme.txt2;
+                font-size: 24px;
+                horizontal-alignment: center;
+            }
 
-                Text {
-                    text: "Search your library";
-                    color: Theme.txt2;
-                    font-size: 24px;
-                    horizontal-alignment: center;
-                }
-
-                Text {
-                    text: "Find songs by title or artist using the bar above";
-                    color: Theme.srch;
-                    font-size: 15px;
-                    horizontal-alignment: center;
-                }
+            Text {
+                text: "Find songs by title or artist using the bar above";
+                color: Theme.srch;
+                font-size: 15px;
+                horizontal-alignment: center;
             }
         }
 
@@ -102,22 +102,29 @@ export component SearchView inherits VerticalBox {
             z: -1;
             items: searchResults;
             current-song-id: current-song-id;
-            item-clicked(id) => { item-clicked(id); }
-            show-context-menu(id, liked, x, y) => { show-context-menu(id, liked, x, y); }
-            toggle-selection(id) => { toggle-song-selection(id); }
-            toggle-liked(id, liked) => { toggle-liked(id, liked); }
+            item-clicked(id) => {
+                item-clicked(id);
+            }
+            show-context-menu(id, liked, x, y) => {
+                show-context-menu(id, liked, x, y);
+            }
+            toggle-selection(id) => {
+                toggle-song-selection(id);
+            }
+            toggle-liked(id, liked) => {
+                toggle-liked(id, liked);
+            }
         }
     }
 }
 
 export component MainView inherits Rectangle {
-    background: Theme.bgd2;
-    border-radius: 15px;
     in property <Tabs> active-view;
     in property <[Song]> searchResults;
     in property <[PlaylistMinimal]> playlists;
     in property <Playlist> current-playlist;
     in property <[Song]> liked-songs;
+    in property <[Song]> last-played;
     in property <string> current-song-id: "";
     out property <bool> in-playlist <=> libView.in-playlist;
     in-out property <string> renaming-playlist-id <=> libView.renaming-playlist-id;
@@ -138,22 +145,36 @@ export component MainView inherits Rectangle {
             visible when active-view == Tabs.Search: {
                 opacity: 1;
                 visible: true;
-                in-out { animate opacity { duration: 100ms; } }
+                in-out {
+                    animate opacity { duration: 100ms; }
+                }
             }
             invisible when active-view != Tabs.Search: {
                 opacity: 0;
                 visible: false;
-                in-out { animate opacity { duration: 100ms; } }
+                in-out {
+                    animate opacity { duration: 100ms; }
+                }
             }
         ]
 
         searchResults: root.searchResults;
         current-song-id: root.current-song-id;
-        submit(q, m, f) => { query-submit(q, m, f); }
-        item-clicked(id) => { add(id); }
-        show-context-menu(id, liked, x, y) => { show-context-menu(id, liked, x, y); }
-        toggle-song-selection(id) => { toggle-song-selection(id); }
-        toggle-liked(id, liked) => { toggle-liked(id, liked); }
+        submit(q, m, f) => {
+            query-submit(q, m, f);
+        }
+        item-clicked(id) => {
+            add(id);
+        }
+        show-context-menu(id, liked, x, y) => {
+            show-context-menu(id, liked, x, y);
+        }
+        toggle-song-selection(id) => {
+            toggle-song-selection(id);
+        }
+        toggle-liked(id, liked) => {
+            toggle-liked(id, liked);
+        }
     }
 
     libView := LibraryView {
@@ -161,26 +182,49 @@ export component MainView inherits Rectangle {
             visible when active-view == Tabs.Library: {
                 opacity: 1;
                 visible: true;
-                in-out { animate opacity { duration: 100ms; } }
+                in-out {
+                    animate opacity { duration: 100ms; }
+                }
             }
             invisible when active-view != Tabs.Library: {
                 opacity: 0;
                 visible: false;
-                in-out { animate opacity { duration: 100ms; } }
+                in-out {
+                    animate opacity { duration: 100ms; }
+                }
             }
         ]
         liked-songs: root.liked-songs;
+        last-played: root.last-played;
         playlists: root.playlists;
         current-playlist: root.current-playlist;
         current-song-id: root.current-song-id;
-        item-clicked(id) => { root.add(id); }
-        show-context-menu(id, liked, x, y) => { root.show-context-menu(id, liked, x, y); }
-        toggle-song-selection(id) => { root.toggle-song-selection(id); }
-        toggle-liked(id, liked) => { root.toggle-liked(id, liked); }
-        show-playlist-context-menu(id, title, x, y) => { root.show-playlist-context-menu(id, title, x, y); }
-        get-playlist(id) => { root.get-playlist(id); }
-        replace-queue(pl) => { root.replace-queue(pl); }
-        create-playlist(name) => { root.create-playlist(name); }
-        rename-playlist(id, name) => { root.rename-playlist(id, name); }
+        item-clicked(id) => {
+            root.add(id);
+        }
+        show-context-menu(id, liked, x, y) => {
+            root.show-context-menu(id, liked, x, y);
+        }
+        toggle-song-selection(id) => {
+            root.toggle-song-selection(id);
+        }
+        toggle-liked(id, liked) => {
+            root.toggle-liked(id, liked);
+        }
+        show-playlist-context-menu(id, title, x, y) => {
+            root.show-playlist-context-menu(id, title, x, y);
+        }
+        get-playlist(id) => {
+            root.get-playlist(id);
+        }
+        replace-queue(pl) => {
+            root.replace-queue(pl);
+        }
+        create-playlist(name) => {
+            root.create-playlist(name);
+        }
+        rename-playlist(id, name) => {
+            root.rename-playlist(id, name);
+        }
     }
 }

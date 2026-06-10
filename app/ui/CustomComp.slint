@@ -53,11 +53,6 @@ export component CustomSlider inherits Rectangle {
     private property <float> normalizedValue: (value - minimum) / (maximum - minimum);
     private property <bool> pressed: false;
 
-    animate normalizedDisplayValue {
-        duration: 190ms;
-        easing: ease;
-    }
-
     changed value => {
         if !root.pressed {
             root.displayValue = root.value;
@@ -294,6 +289,7 @@ export component SongCardRow inherits Rectangle {
 
 export component PlaylistCard inherits Rectangle {
     in property <PlaylistMinimal> playlist;
+    in property <string> icon: "";
     callback clicked();
     callback show-context-menu(string, string, length, length);
 
@@ -324,39 +320,40 @@ export component PlaylistCard inherits Rectangle {
             background: Theme.bgd3;
             clip: true;
 
-            if playlist.album-arts.length == 0: Text {
-                text: "";
+            if root.icon != "": Text {
+                text: root.icon;
                 font-family: "JetBrainsMono NFP";
-                font-size: 32px;
+                font-size: 64px;
                 color: Theme.acct;
+                width: parent.width;
+                height: parent.height;
                 horizontal-alignment: center;
                 vertical-alignment: center;
             }
-
-            if playlist.album-arts.length > 0: GridLayout {
+            if root.icon == "": GridLayout {
                 spacing: 0px;
                 Row {
-                    Image {
-                        source: playlist.album-arts[0];
-                        width: 69px;
-                        height: 69px;
+                    Rectangle {
+                        width: 69px; height: 69px; background: Theme.bgd3; clip: true;
+                        if playlist.album-arts.length > 0: Image { source: playlist.album-arts[0]; width: parent.width; height: parent.height; image-fit: cover; }
+                        if playlist.album-arts.length == 0: Text { text: "\u{f0025}"; font-family: "JetBrainsMono NFP"; font-size: 38px; color: Theme.txt2; width: parent.width; height: parent.height; horizontal-alignment: center; vertical-alignment: center; }
                     }
-                    Image {
-                        source: playlist.album-arts[1];
-                        width: 69px;
-                        height: 69px;
+                    Rectangle {
+                        width: 69px; height: 69px; background: Theme.bgd3; clip: true;
+                        if playlist.album-arts.length > 1: Image { source: playlist.album-arts[1]; width: parent.width; height: parent.height; image-fit: cover; }
+                        if playlist.album-arts.length <= 1: Text { text: "\u{f0025}"; font-family: "JetBrainsMono NFP"; font-size: 38px; color: Theme.txt2; width: parent.width; height: parent.height; horizontal-alignment: center; vertical-alignment: center; }
                     }
                 }
                 Row {
-                    Image {
-                        source: playlist.album-arts[2];
-                        width: 69px;
-                        height: 69px;
+                    Rectangle {
+                        width: 69px; height: 69px; background: Theme.bgd3; clip: true;
+                        if playlist.album-arts.length > 2: Image { source: playlist.album-arts[2]; width: parent.width; height: parent.height; image-fit: cover; }
+                        if playlist.album-arts.length <= 2: Text { text: "\u{f0025}"; font-family: "JetBrainsMono NFP"; font-size: 38px; color: Theme.txt2; width: parent.width; height: parent.height; horizontal-alignment: center; vertical-alignment: center; }
                     }
-                    Image {
-                        source: playlist.album-arts[3];
-                        width: 69px;
-                        height: 69px;
+                    Rectangle {
+                        width: 69px; height: 69px; background: Theme.bgd3; clip: true;
+                        if playlist.album-arts.length > 3: Image { source: playlist.album-arts[3]; width: parent.width; height: parent.height; image-fit: cover; }
+                        if playlist.album-arts.length <= 3: Text { text: "\u{f0025}"; font-family: "JetBrainsMono NFP"; font-size: 38px; color: Theme.txt2; width: parent.width; height: parent.height; horizontal-alignment: center; vertical-alignment: center; }
                     }
                 }
             }
@@ -382,11 +379,17 @@ export component PlaylistCard inherits Rectangle {
 
 export component PlList inherits VerticalLayout {
     in property <[PlaylistMinimal]> items;
+    in property <int> liked-count: 0;
     callback item-clicked(string);
     callback show-context-menu(string, string, length, length);
+    callback liked-clicked();
 
-    private property <int> columns: max(1, floor(self.width / 184px));
-    private property <int> row-count: (items.length + columns - 1) / columns;
+    private property <int> total: 1 + items.length;
+    private property <int> columns: 1;
+    private property <int> row-count: (total + columns - 1) / columns;
+
+    init => { columns = max(1, floor(self.width / 184px)); }
+    changed width => { columns = max(1, floor(self.width / 184px)); }
 
     Rectangle {
         border-radius: 10px;
@@ -403,13 +406,19 @@ export component PlList inherits VerticalLayout {
                     alignment: start;
 
                     for col in columns: PlaylistCard {
-                        visible: (row * columns + col) < items.length;
-                        playlist: items[row * columns + col];
+                        private property <bool> is-liked: (row * columns + col) == 0;
+                        private property <int> pl-idx: max(0, (row * columns + col) - 1);
+                        visible: (row * columns + col) < total;
+                        icon: is-liked ? "\u{f004}" : "";
+                        playlist: is-liked
+                            ? { title: "Liked Songs", id: "__liked__", length: liked-count }
+                            : items[pl-idx];
                         clicked => {
-                            item-clicked(items[row * columns + col].id);
+                            if (is-liked) { root.liked-clicked(); }
+                            else { root.item-clicked(items[pl-idx].id); }
                         }
                         show-context-menu(id, title, x, y) => {
-                            show-context-menu(id, title, x, y);
+                            if (!is-liked) { root.show-context-menu(id, title, x, y); }
                         }
                     }
                 }
@@ -489,11 +498,22 @@ export component SongList inherits VerticalLayout {
                             height: 50px;
                             width: 50px;
                             border-radius: 10px;
+                            background: Theme.bgd3;
                             clip: true;
-                            Image {
+                            if item.has_art: Image {
                                 source: item.album_art;
                                 height: parent.width;
                                 width: parent.height;
+                            }
+                            if !item.has_art: Text {
+                                text: "\u{f0025}";
+                                font-family: "JetBrainsMono NFP";
+                                font-size: 26px;
+                                color: Theme.txt2;
+                                width: parent.width;
+                                height: parent.height;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
                             }
                         }
 

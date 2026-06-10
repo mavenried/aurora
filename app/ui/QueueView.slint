@@ -15,7 +15,7 @@ export component QueueView inherits Rectangle {
     private property <length> drag-start-y: 0px;
 
     width: 400px;
-    background: Theme.bgd1;
+    background: Theme.bgd2;
     border-radius: 15px;
     clip: true;
 
@@ -31,7 +31,7 @@ export component QueueView inherits Rectangle {
             Rectangle {
                 width: 60px;
                 height: 30px;
-                background: clear-ta.has-hover ? Theme.bgd3 : Theme.bgd1;
+                background: clear-ta.has-hover ? Theme.bgd3 : Theme.bgd2;
                 animate background { duration: 100ms; }
                 border-radius: 10px;
                 clear-ta := TouchArea {
@@ -41,7 +41,32 @@ export component QueueView inherits Rectangle {
             }
         }
 
-        scroll := ScrollView {
+        if queue.length == 0: VerticalLayout {
+            vertical-stretch: 1;
+            alignment: center;
+            spacing: 15px;
+            Text {
+                text: "\u{f0025}";
+                font-family: "JetBrainsMono NFP";
+                font-size: 64px;
+                color: Theme.bgd3;
+                horizontal-alignment: center;
+            }
+            Text {
+                text: "Queue is empty";
+                color: Theme.txt2;
+                font-size: 18px;
+                horizontal-alignment: center;
+            }
+            Text {
+                text: "Search for songs to add them";
+                color: Theme.srch;
+                font-size: 13px;
+                horizontal-alignment: center;
+            }
+        }
+
+        if queue.length > 0: ScrollView {
             transform-rotation: 180deg;
             background: Theme.bgd2;
 
@@ -64,6 +89,7 @@ export component QueueView inherits Rectangle {
                     Artists: item.artists;
                     AlbumArt: item.album_art;
                     Title: item.title;
+                    has-art: item.has_art;
                     border-radius: 0px;
                     opacity: root.drag-idx == i ? 0.3 : 1.0;
                     background: item-ta.has-hover ? Theme.bgd3 : Theme.bgd2;

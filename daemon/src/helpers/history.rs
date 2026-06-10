@@ -1,34 +1,58 @@
-use std::{collections::VecDeque, process::exit};
-
+use std::collections::VecDeque;
 use uuid::Uuid;
+
+use crate::helpers::db::{to_io, Db};
 
 const MAX_HISTORY: usize = 30;
 
-pub async fn load_history() -> std::io::Result<VecDeque<Uuid>> {
-    let history_file = dirs::config_dir()
-        .unwrap_or_else(|| {
-            tracing::error!("No config dir.");
-            exit(1)
-        })
-        .join("aurora-player")
-        .join("history.json");
-    let data = tokio::fs::read_to_string(history_file).await?;
-    let history: VecDeque<Uuid> = serde_json::from_str(&data)?;
-    Ok(history)
+pub async fn load_history(db: &Db) -> std::io::Result<VecDeque<Uuid>> {
+    let db = db.clone();
+    tokio::task::spawn_blocking(move || {
+        let conn = db.lock().unwrap();
+        let mut stmt = conn
+            .prepare(
+                "SELECT song_id FROM history ORDER BY played_at DESC LIMIT 30",
+            )
+            .map_err(to_io)?;
+        let rows = stmt
+            .query_map([], |row| {
+                let s: String = row.get(0)?;
+                Ok(s)
+            })
+            .map_err(to_io)?;
+        let mut deque = VecDeque::new();
+        for row in rows {
+            let s = row.map_err(to_io)?;
+            if let Ok(id) = Uuid::parse_str(&s) {
+                deque.push_back(id);
+            }
+        }
+        Ok(deque)
+    })
+    .await
+    .map_err(to_io)?
 }
 
-pub async fn save_history(history: &VecDeque<Uuid>) -> std::io::Result<()> {
-    let configdir = dirs::config_dir()
-        .unwrap_or_else(|| {
-            tracing::error!("No config dir.");
-            exit(1)
-        })
-        .join("aurora-player");
-    tokio::fs::create_dir_all(&configdir).await?;
-    let history_file = configdir.join("history.json");
-    let data = serde_json::to_string_pretty(history)?;
-    tokio::fs::write(history_file, data).await?;
-    Ok(())
+pub async fn save_history(db: &Db, history: &VecDeque<Uuid>) -> std::io::Result<()> {
+    let db = db.clone();
+    let history = history.clone();
+    tokio::task::spawn_blocking(move || {
+        let conn = db.lock().unwrap();
+        conn.execute_batch("BEGIN").map_err(to_io)?;
+        conn.execute("DELETE FROM history", []).map_err(to_io)?;
+        for (i, id) in history.iter().enumerate() {
+            let played_at = i64::MAX - i as i64;
+            conn.execute(
+                "INSERT INTO history (song_id, played_at) VALUES (?1, ?2)",
+                rusqlite::params![id.to_string(), played_at],
+            )
+            .map_err(to_io)?;
+        }
+        conn.execute_batch("COMMIT").map_err(to_io)?;
+        Ok(())
+    })
+    .await
+    .map_err(to_io)?
 }
 
 pub fn push_history(history: &mut VecDeque<Uuid>, song_id: Uuid) {

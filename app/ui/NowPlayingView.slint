@@ -3,6 +3,7 @@ export component NowPlayingView inherits Rectangle {
     in property <string> Title;
     in property <string> Artists;
     in property <image> AlbumArt;
+    in property <bool> has-art: false;
     background: Theme.bgd2;
     border-radius: 15px;
 
@@ -10,14 +11,25 @@ export component NowPlayingView inherits Rectangle {
         padding: 10px;
         spacing: 10px;
         Rectangle {
-            Image {
+            if has-art: Image {
                 source: AlbumArt;
                 height: parent.height;
                 width: parent.width;
             }
+            if !has-art: Text {
+                text: "\u{f0025}";
+                font-family: "JetBrainsMono NFP";
+                font-size: 52px;
+                color: Theme.txt2;
+                width: parent.width;
+                height: parent.height;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
 
             height: 80px;
             width: 80px;
+            background: Theme.bgd3;
             clip: true;
             border-radius: 15px;
         }

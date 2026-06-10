@@ -63,9 +63,11 @@ export component AuroraPlayer inherits Window {
     in-out property <float> volume: 1.0;
     in-out property <[string]> artist-list;
     in-out property <[Song]> artist-songs;
-    in-out property <[Song]> last-played;
+    in-out property <bool> has-art: false;
+    in-out property <[Song]> last-played: [];
     in-out property <[Song]> liked-songs;
     in-out property <string> current-playing-id: "";
+    in-out property <bool> current-song-liked: false;
 
     in-out property <[Song]> queue;
     in-out property <[Song]> searchResults;
@@ -99,16 +101,6 @@ export component AuroraPlayer inherits Window {
     in-out property <int> queue-ctx-idx: -1;
 
     forward-focus: key-handler;
-
-    key-handler := FocusScope {
-        key-pressed(event) => {
-            if event.modifiers.control && event.text == Key.Escape {
-                root.clear-song-selection();
-                return EventResult.accept;
-            }
-            EventResult.reject
-        }
-    }
 
     title: "Aurora Player";
     min-height: 650px;
@@ -160,8 +152,17 @@ export component AuroraPlayer inherits Window {
         remove-from-queue(idx) => { root.queue-remove(idx + 1); }
     }
 
-    Rectangle {
-        background: Theme.bgd0;
+    key-handler := FocusScope {
+        key-pressed(event) => {
+            if event.modifiers.control && event.text == Key.Escape {
+                root.clear-song-selection();
+                return EventResult.accept;
+            }
+            EventResult.reject
+        }
+
+        Rectangle {
+            background: Theme.bgd0;
         HorizontalLayout {
             spacing: 5px;
             padding: 5px;
@@ -187,6 +188,7 @@ export component AuroraPlayer inherits Window {
                         Title: root.Title;
                         Artists: root.Artists;
                         AlbumArt: root.AlbumArt;
+                        has-art: root.has-art;
                         width: 400px;
                         height: 100px;
                     }
@@ -210,6 +212,7 @@ export component AuroraPlayer inherits Window {
                     current-playlist: root.playlistResult;
                     playlists: root.playlistsList;
                     liked-songs: root.liked-songs;
+                    last-played: root.last-played;
                     current-song-id: root.current-playing-id;
                     query-submit(q, m, f) => { search(q, m, f); }
                     add(s) => { root.add(s); }
@@ -245,12 +248,20 @@ export component AuroraPlayer inherits Window {
                     set-shuffle(b) => { root.set-shuffle(b); }
                     set-repeat(r) => { root.set-repeat(r); }
                     set-volume(v) => { root.set-volume(v); }
+                    like-toggle => {
+                        if (root.current-song-liked) {
+                            root.unlike-song(root.current-playing-id);
+                        } else {
+                            root.like-song(root.current-playing-id);
+                        }
+                    }
                     value <=> position;
                     duration: root.duration;
                     is-paused: root.is_paused;
                     shuffle <=> root.shuffle;
                     repeat <=> root.repeat-mode;
                     volume <=> root.volume;
+                    is-liked: root.current-song-liked;
                 }
             }
         }
@@ -319,4 +330,5 @@ export component AuroraPlayer inherits Window {
             }
         }
     }
+}
 }

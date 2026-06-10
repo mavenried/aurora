@@ -11,6 +11,8 @@ use std::sync::Arc;
 use std::time::Duration;
 use uuid::Uuid;
 
+use crate::helpers::db::Db;
+
 pub struct StateStruct {
     pub current_song: Option<SongMeta>,
     pub queue: VecDeque<SongMeta>,
@@ -24,6 +26,7 @@ pub struct StateStruct {
     pub repeat: u8,
     pub recently_played: VecDeque<Uuid>,
     pub liked_ids: HashSet<Uuid>,
+    pub db: Db,
 }
 
 mod playback;
@@ -48,6 +51,7 @@ impl StateStruct {
             repeat: self.repeat,
         }
     }
+
     pub async fn add(&mut self) {
         if let Some(song) = &self.current_song {
             let song_uuid = song.id;
@@ -65,8 +69,9 @@ impl StateStruct {
 
             crate::helpers::push_history(&mut self.recently_played, song_uuid);
             let history = self.recently_played.clone();
+            let db = self.db.clone();
             tokio::spawn(async move {
-                if let Err(e) = crate::helpers::save_history(&history).await {
+                if let Err(e) = crate::helpers::save_history(&db, &history).await {
                     tracing::error!("Failed to save play history: {e}");
                 }
             });
@@ -80,6 +85,7 @@ impl StateStruct {
             self.sink.pause();
         }
     }
+
     pub async fn clear(&mut self) {
         self.sink.clear();
         self.queue.clear();
@@ -91,6 +97,7 @@ impl StateStruct {
     pub fn is_paused(&self) -> bool {
         self.sink.is_paused()
     }
+
     pub fn get_art(&mut self, id: Uuid) {
         let mut outpath = dirs::cache_dir()
             .unwrap_or(PathBuf::from("/tmp/"))
@@ -155,6 +162,24 @@ impl StateStruct {
             return;
         }
 
-        song.art_path = Some(outpath);
+        song.art_path = Some(outpath.clone());
+
+        // Persist art_path to DB in background
+        let db = self.db.clone();
+        let id_str = id.to_string();
+        let art_str = outpath.to_string_lossy().to_string();
+        tokio::spawn(async move {
+            tokio::task::spawn_blocking(move || {
+                if let Ok(conn) = db.lock() {
+                    conn.execute(
+                        "UPDATE songs SET art_path = ?1 WHERE id = ?2",
+                        rusqlite::params![art_str, id_str],
+                    )
+                    .ok();
+                }
+            })
+            .await
+            .ok();
+        });
     }
 }

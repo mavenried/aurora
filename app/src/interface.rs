@@ -79,60 +79,79 @@ async fn unix_recver(
                     .as_ref()
                     .map(|s| s.id.to_string())
                     .unwrap_or_default();
+                let song_changed = current_id != state_locked.current_song_id;
                 state_locked.current_song_id = current_id.clone();
+
+                let new_art_path = status.current_song.as_ref().and_then(|s| s.art_path.clone());
+                let art_changed = new_art_path != state_locked.current_art_path;
+                if art_changed {
+                    state_locked.current_art_path = new_art_path.clone();
+                }
+
                 let shuffle = status.shuffle;
                 let repeat = status.repeat;
                 let volume = status.volume;
+                let is_liked = state_locked.liked_song_ids.contains(&current_id);
+
+                let position_ms = status.position.as_millis() as i32;
+
                 drop(state_locked);
 
+                // Load art on the async thread (not the UI thread) and only when it changes.
+                // slint::Image is not Send, so we decode to SharedPixelBuffer here and
+                // create the Image inside upgrade_in_event_loop.
+                let maybe_art: Option<SharedPixelBuffer<Rgba8Pixel>> = if art_changed {
+                    let buf = new_art_path
+                        .as_ref()
+                        .and_then(|p| std::fs::read(p).ok())
+                        .and_then(|data| album_art_from_data(&data).ok())
+                        .unwrap_or(default_art);
+                    Some(buf)
+                } else {
+                    None
+                };
+
                 let _ = app.upgrade_in_event_loop(move |aurora| {
-                    aurora.set_Title(
-                        status
-                            .current_song
-                            .as_ref()
-                            .map(|s| s.title.as_str())
-                            .unwrap_or("Nothing Playing")
-                            .into(),
-                    );
-
-                    aurora.set_Artists(
-                        status
-                            .current_song
-                            .as_ref()
-                            .map(|s| s.artists.join(", "))
-                            .unwrap_or_else(|| "No Artist".into())
-                            .into(),
-                    );
-
-                    aurora.set_duration(
-                        status
-                            .current_song
-                            .as_ref()
-                            .map(|s| s.duration.as_millis() as i32)
-                            .unwrap_or(0),
-                    );
-
-                    aurora.set_AlbumArt({
-                        if status
-                            .current_song
-                            .as_ref()
-                            .is_some_and(|s| s.art_path.is_some())
-                        {
-                            Image::load_from_path(
-                                status.current_song.unwrap().art_path.unwrap().as_path(),
-                            )
-                            .unwrap()
-                        } else {
-                            Image::from_rgba8(default_art)
-                        }
-                    });
-
                     aurora.set_is_paused(status.is_paused);
-                    aurora.set_position(status.position.as_millis() as i32);
-                    aurora.set_current_playing_id(current_id.into());
+                    aurora.set_position(position_ms);
                     aurora.set_shuffle(shuffle);
                     aurora.set_repeat_mode(repeat as i32);
                     aurora.set_volume(volume);
+                    aurora.set_current_song_liked(is_liked);
+
+                    // Song metadata only changes when the song changes — avoid triggering
+                    // reactive re-evaluations across SongList/PlaylistCard bindings every tick.
+                    if song_changed {
+                        aurora.set_Title(
+                            status
+                                .current_song
+                                .as_ref()
+                                .map(|s| s.title.as_str())
+                                .unwrap_or("Nothing Playing")
+                                .into(),
+                        );
+                        aurora.set_Artists(
+                            status
+                                .current_song
+                                .as_ref()
+                                .map(|s| s.artists.join(", "))
+                                .unwrap_or_else(|| "No Artist".into())
+                                .into(),
+                        );
+                        aurora.set_duration(
+                            status
+                                .current_song
+                                .as_ref()
+                                .map(|s| s.duration.as_millis() as i32)
+                                .unwrap_or(0),
+                        );
+                        aurora.set_current_playing_id(current_id.into());
+                    }
+
+                    if let Some(buf) = maybe_art {
+                        aurora.set_has_art(new_art_path.is_some());
+                        aurora.set_AlbumArt(Image::from_rgba8(buf));
+                    }
                 });
             }
 
@@ -276,6 +295,7 @@ pub async fn interface(app: slint::Weak<AuroraPlayer>) -> anyhow::Result<()> {
         last_played: vec![],
         liked_songs: vec![],
         pending_artist_search: false,
+        current_art_path: None,
     }));
 
     let state_clone = state.clone();

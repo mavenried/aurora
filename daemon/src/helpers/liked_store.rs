@@ -1,26 +1,62 @@
 use std::collections::HashSet;
 use uuid::Uuid;
 
-pub async fn load_liked() -> std::io::Result<HashSet<Uuid>> {
-    let file = dirs::config_dir()
-        .unwrap()
-        .join("aurora-player")
-        .join("liked.json");
-    if !tokio::fs::try_exists(&file).await.unwrap_or(false) {
-        return Ok(HashSet::new());
-    }
-    let data = tokio::fs::read_to_string(&file).await?;
-    let ids: Vec<Uuid> = serde_json::from_str(&data).unwrap_or_default();
-    Ok(ids.into_iter().collect())
+use crate::helpers::db::{to_io, Db};
+
+pub async fn load_liked(db: &Db) -> std::io::Result<HashSet<Uuid>> {
+    let db = db.clone();
+    tokio::task::spawn_blocking(move || {
+        let conn = db.lock().unwrap();
+        let mut stmt = conn
+            .prepare("SELECT song_id FROM liked_songs")
+            .map_err(to_io)?;
+        let rows = stmt
+            .query_map([], |row| {
+                let s: String = row.get(0)?;
+                Ok(s)
+            })
+            .map_err(to_io)?;
+        let mut set = HashSet::new();
+        for row in rows {
+            let s = row.map_err(to_io)?;
+            if let Ok(id) = Uuid::parse_str(&s) {
+                set.insert(id);
+            }
+        }
+        Ok(set)
+    })
+    .await
+    .map_err(to_io)?
 }
 
-pub async fn save_liked(ids: &HashSet<Uuid>) -> std::io::Result<()> {
-    let configdir = dirs::config_dir().unwrap().join("aurora-player");
-    tokio::fs::create_dir_all(&configdir).await?;
-    let mut ids_vec: Vec<&Uuid> = ids.iter().collect();
-    ids_vec.sort();
-    let data = serde_json::to_string_pretty(&ids_vec)
-        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
-    tokio::fs::write(configdir.join("liked.json"), data).await?;
-    Ok(())
+pub async fn add_liked(db: &Db, id: Uuid) -> std::io::Result<()> {
+    let db = db.clone();
+    let id_str = id.to_string();
+    tokio::task::spawn_blocking(move || {
+        let conn = db.lock().unwrap();
+        conn.execute(
+            "INSERT OR IGNORE INTO liked_songs (song_id) VALUES (?1)",
+            rusqlite::params![id_str],
+        )
+        .map_err(to_io)?;
+        Ok(())
+    })
+    .await
+    .map_err(to_io)?
+}
+
+pub async fn remove_liked(db: &Db, id: Uuid) -> std::io::Result<()> {
+    let db = db.clone();
+    let id_str = id.to_string();
+    tokio::task::spawn_blocking(move || {
+        let conn = db.lock().unwrap();
+        conn.execute(
+            "DELETE FROM liked_songs WHERE song_id = ?1",
+            rusqlite::params![id_str],
+        )
+        .map_err(to_io)?;
+        Ok(())
+    })
+    .await
+    .map_err(to_io)?
 }

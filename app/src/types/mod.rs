@@ -22,4 +22,5 @@ pub struct StateStruct {
     pub last_played: Vec<Song>,
     pub liked_songs: Vec<aurora_protocol::Song>,
     pub pending_artist_search: bool,
+    pub current_art_path: Option<std::path::PathBuf>,
 }

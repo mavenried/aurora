@@ -1,3 +1,4 @@
+pub mod db;
 mod history;
 mod index;
 mod liked_store;

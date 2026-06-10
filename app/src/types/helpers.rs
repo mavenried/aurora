@@ -35,6 +35,7 @@ impl StateStruct {
                     selected: false,
                     duration: format_duration(song.duration),
                     liked: liked.contains(&song.id.to_string()),
+                    has_art: song.art_path.is_some(),
                 })
             }
             aurora.set_queue(ModelRc::new(Rc::new(VecModel::from(songs))));
@@ -44,21 +45,16 @@ impl StateStruct {
     pub async fn update_playlists(&mut self, app: Weak<AuroraPlayer>) {
         tracing::info!("Redraw PL list");
         let results = self.playlist_list_results.clone();
-        let default_art = self.default_art_buffer.clone();
         let _ = app.upgrade_in_event_loop(move |aurora: AuroraPlayer| {
             let mut songs = vec![];
             for playlist in results {
-                let mut album_arts = vec![];
-                for i in 0..4 {
-                    album_arts.push(
-                        playlist
-                            .art_paths
-                            .get(i)
-                            .and_then(|p| p.as_ref())
-                            .and_then(|path| Image::load_from_path(path.as_path()).ok())
-                            .unwrap_or_else(|| Image::from_rgba8(default_art.clone())),
-                    );
-                }
+                // Only include slots that have real art; Slint renders an icon for missing ones.
+                let album_arts: Vec<Image> = playlist
+                    .art_paths
+                    .iter()
+                    .take(4)
+                    .filter_map(|opt| opt.as_ref().and_then(|p| Image::load_from_path(p.as_path()).ok()))
+                    .collect();
                 songs.push(PlaylistMinimal {
                     title: playlist.name.clone().into(),
                     length: playlist.len as i32,
@@ -94,6 +90,7 @@ impl StateStruct {
                     selected: selected.contains(&song.id.to_string()),
                     duration: format_duration(song.duration),
                     liked: liked.contains(&song.id.to_string()),
+                    has_art: song.art_path.is_some(),
                 })
             }
             aurora.set_searchResults(ModelRc::new(Rc::new(VecModel::from(songs))));
@@ -123,6 +120,7 @@ impl StateStruct {
                     selected: selected.contains(&song.id.to_string()),
                     duration: format_duration(song.duration),
                     liked: liked.contains(&song.id.to_string()),
+                    has_art: song.art_path.is_some(),
                 })
             }
             aurora.set_artist_songs(ModelRc::new(Rc::new(VecModel::from(songs))));
@@ -151,6 +149,7 @@ impl StateStruct {
                     selected: false,
                     duration: format_duration(song.duration),
                     liked: liked.contains(&song.id.to_string()),
+                    has_art: song.art_path.is_some(),
                 })
             }
             aurora.set_last_played(ModelRc::new(Rc::new(VecModel::from(songs))));
@@ -180,6 +179,7 @@ impl StateStruct {
                     selected: selected.contains(&song.id.to_string()),
                     duration: format_duration(song.duration),
                     liked: liked.contains(&song.id.to_string()),
+                    has_art: song.art_path.is_some(),
                 })
             }
             aurora.set_liked_songs(ModelRc::new(Rc::new(VecModel::from(songs))));
@@ -211,6 +211,7 @@ impl StateStruct {
                     selected: selected.contains(&song.id.to_string()),
                     duration: format_duration(song.duration),
                     liked: liked.contains(&song.id.to_string()),
+                    has_art: song.art_path.is_some(),
                 })
             }
             let slint_playlist = Playlist {

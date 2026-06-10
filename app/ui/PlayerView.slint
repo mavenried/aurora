@@ -23,6 +23,7 @@ export component PlayerView inherits Rectangle {
     in-out property <bool> shuffle: false;
     in-out property <int> repeat: 0;
     in-out property <float> volume: 1.0;
+    in property <bool> is-liked: false;
 
     callback prev();
     callback pause();
@@ -31,6 +32,7 @@ export component PlayerView inherits Rectangle {
     callback set-shuffle(bool);
     callback set-repeat(int);
     callback set-volume(float);
+    callback like-toggle();
 
     VerticalLayout {
         padding: 5px;
@@ -183,10 +185,37 @@ export component PlayerView inherits Rectangle {
             }
 
             HorizontalLayout {
-                width: 180px;
+                width: 220px;
                 alignment: LayoutAlignment.end;
                 spacing: 5px;
                 padding: 5px;
+
+                VerticalLayout {
+                    alignment: LayoutAlignment.center;
+                    Rectangle {
+                        width: 36px;
+                        height: 36px;
+                        border-radius: 18px;
+                        background: likeTA.has-hover ? Theme.bgd4 : Theme.bgd3;
+                        animate background { duration: 100ms; }
+                        Text {
+                            vertical-alignment: TextVerticalAlignment.center;
+                            horizontal-alignment: TextHorizontalAlignment.center;
+                            width: 36px;
+                            height: 36px;
+                            text: root.is-liked ? "\u{f004}" : "\u{eb05}";
+                            font-size: 18px;
+                            font-family: "JetBrainsMono NFP";
+                            color: root.is-liked ? Theme.acct : (likeTA.has-hover ? Theme.txt1 : Theme.txt2);
+                            animate color { duration: 100ms; }
+                        }
+                        likeTA := TouchArea {
+                            height: parent.height;
+                            width: parent.width;
+                            clicked => { like-toggle(); }
+                        }
+                    }
+                }
 
                 VerticalLayout {
                     alignment: LayoutAlignment.center;

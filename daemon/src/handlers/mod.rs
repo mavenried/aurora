@@ -58,6 +58,7 @@ pub async fn handle_client(
                 send_to_client(&writer, &Response::Volume(state.lock().await.volume)).await;
 
             let _ = settings::get_last_played(&writer, &state).await;
+            let _ = liked::get_liked_songs(&writer, &state).await;
             loop {
                 std::thread::sleep(Duration::from_millis(200));
                 if status(&writer, &state).await.is_err() {

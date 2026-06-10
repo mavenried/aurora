@@ -60,7 +60,8 @@ pub async fn init(state: State) {
         if pending && last_event.elapsed() >= debounce {
             pending = false;
             tracing::info!("File watcher: rescanning music directory…");
-            match helpers::generate_index(&music_dir).await {
+            let db = state.lock().await.db.clone();
+            match helpers::build_index(&music_dir, &db).await {
                 Ok(new_index) => {
                     state.lock().await.index = new_index;
                     tracing::info!("File watcher: index updated.");
