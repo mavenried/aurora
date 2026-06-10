@@ -49,5 +49,5 @@ cargo run --release -p aurora-player
 ## Requirements
 
 - Rust (edition 2024)
-- A nerd font — the UI uses **JetBrainsMono NFP** (bundled in `app/assets/`)
+- A fonts — the UI uses **JetBrainsMono NFP** and **Noto Sans** (bundled in `app/assets/`)
 - Linux (uses Unix sockets and MPRIS/D-Bus)
