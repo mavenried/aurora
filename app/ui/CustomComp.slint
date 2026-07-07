@@ -302,7 +302,7 @@ export component PlaylistCard inherits Rectangle {
     touch := TouchArea {
         pointer-event(event) => {
             if event.button == PointerEventButton.right && event.kind == PointerEventKind.down {
-                show-context-menu(playlist.id, playlist.title, touch.absolute-position.x + touch.mouse-x, touch.absolute-position.y + touch.mouse-y);
+                show-context-menu(playlist.id, playlist.title, round((touch.absolute-position.x + touch.mouse-x) / 1px) * 1px, round((touch.absolute-position.y + touch.mouse-y) / 1px) * 1px);
             }
         }
         clicked => {
@@ -475,7 +475,7 @@ export component SongList inherits VerticalLayout {
                                 ctrl-pressed = event.modifiers.control;
                             }
                             if event.button == PointerEventButton.right && event.kind == PointerEventKind.down {
-                                show-context-menu(item.id, item.liked, touch.absolute-position.x + touch.mouse-x, touch.absolute-position.y + touch.mouse-y);
+                                show-context-menu(item.id, item.liked, round((touch.absolute-position.x + touch.mouse-x) / 1px) * 1px, round((touch.absolute-position.y + touch.mouse-y) / 1px) * 1px);
                             }
                         }
                         clicked => {

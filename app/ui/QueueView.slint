@@ -101,7 +101,7 @@ export component QueueView inherits Rectangle {
                         height: parent.height;
                         pointer-event(event) => {
                             if event.button == PointerEventButton.right && event.kind == PointerEventKind.up {
-                                show-queue-context-menu(i, item-ta.absolute-position.x + item-ta.mouse-x, item-ta.absolute-position.y + item-ta.mouse-y);
+                                show-queue-context-menu(i, round((item-ta.absolute-position.x + item-ta.mouse-x) / 1px) * 1px, round((item-ta.absolute-position.y + item-ta.mouse-y) / 1px) * 1px);
                             } else if event.button == PointerEventButton.left && event.kind == PointerEventKind.down {
                                 queue-click(i + 1);
                             }
