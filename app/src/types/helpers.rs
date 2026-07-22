@@ -24,13 +24,11 @@ impl StateStruct {
                 songs.push(Song {
                     title: song.title.clone().into(),
                     artists: song.artists.join(", ").into(),
-                    album_art: {
-                        if song.art_path.is_some() {
-                            Image::load_from_path(song.art_path.clone().unwrap().as_path()).unwrap()
-                        } else {
-                            Image::from_rgba8(default_art.clone())
-                        }
-                    },
+                    album_art: song
+                        .art_path
+                        .as_deref()
+                        .and_then(|p| Image::load_from_path(p).ok())
+                        .unwrap_or_else(|| Image::from_rgba8(default_art.clone())),
                     id: song.id.to_string().into(),
                     selected: false,
                     duration: format_duration(song.duration),
@@ -81,13 +79,11 @@ impl StateStruct {
             for song in results.iter() {
                 songs.push(Song {
                     title: song.title.clone().into(),
-                    album_art: {
-                        if song.art_path.is_some() {
-                            Image::load_from_path(song.art_path.clone().unwrap().as_path()).unwrap()
-                        } else {
-                            Image::from_rgba8(default_art.clone())
-                        }
-                    },
+                    album_art: song
+                        .art_path
+                        .as_deref()
+                        .and_then(|p| Image::load_from_path(p).ok())
+                        .unwrap_or_else(|| Image::from_rgba8(default_art.clone())),
                     artists: song.artists.join(", ").into(),
                     id: song.id.to_string().into(),
                     selected: selected.contains(&song.id.to_string()),
@@ -111,13 +107,11 @@ impl StateStruct {
             for song in results.iter() {
                 songs.push(Song {
                     title: song.title.clone().into(),
-                    album_art: {
-                        if song.art_path.is_some() {
-                            Image::load_from_path(song.art_path.clone().unwrap().as_path()).unwrap()
-                        } else {
-                            Image::from_rgba8(default_art.clone())
-                        }
-                    },
+                    album_art: song
+                        .art_path
+                        .as_deref()
+                        .and_then(|p| Image::load_from_path(p).ok())
+                        .unwrap_or_else(|| Image::from_rgba8(default_art.clone())),
                     artists: song.artists.join(", ").into(),
                     id: song.id.to_string().into(),
                     selected: selected.contains(&song.id.to_string()),
@@ -140,13 +134,11 @@ impl StateStruct {
             for song in results.iter() {
                 songs.push(Song {
                     title: song.title.clone().into(),
-                    album_art: {
-                        if song.art_path.is_some() {
-                            Image::load_from_path(song.art_path.clone().unwrap().as_path()).unwrap()
-                        } else {
-                            Image::from_rgba8(default_art.clone())
-                        }
-                    },
+                    album_art: song
+                        .art_path
+                        .as_deref()
+                        .and_then(|p| Image::load_from_path(p).ok())
+                        .unwrap_or_else(|| Image::from_rgba8(default_art.clone())),
                     artists: song.artists.join(", ").into(),
                     id: song.id.to_string().into(),
                     selected: false,
@@ -170,13 +162,11 @@ impl StateStruct {
             for song in results.iter() {
                 songs.push(Song {
                     title: song.title.clone().into(),
-                    album_art: {
-                        if song.art_path.is_some() {
-                            Image::load_from_path(song.art_path.clone().unwrap().as_path()).unwrap()
-                        } else {
-                            Image::from_rgba8(default_art.clone())
-                        }
-                    },
+                    album_art: song
+                        .art_path
+                        .as_deref()
+                        .and_then(|p| Image::load_from_path(p).ok())
+                        .unwrap_or_else(|| Image::from_rgba8(default_art.clone())),
                     artists: song.artists.join(", ").into(),
                     id: song.id.to_string().into(),
                     selected: selected.contains(&song.id.to_string()),
@@ -202,13 +192,11 @@ impl StateStruct {
             for song in results.iter() {
                 songs.push(Song {
                     title: song.title.clone().into(),
-                    album_art: {
-                        if song.art_path.is_some() {
-                            Image::load_from_path(song.art_path.clone().unwrap().as_path()).unwrap()
-                        } else {
-                            Image::from_rgba8(default_art.clone())
-                        }
-                    },
+                    album_art: song
+                        .art_path
+                        .as_deref()
+                        .and_then(|p| Image::load_from_path(p).ok())
+                        .unwrap_or_else(|| Image::from_rgba8(default_art.clone())),
                     artists: song.artists.join(", ").into(),
                     id: song.id.to_string().into(),
                     selected: selected.contains(&song.id.to_string()),

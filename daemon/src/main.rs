@@ -77,21 +77,24 @@ async fn async_main() -> std::io::Result<()> {
     let recently_played = helpers::load_history(&db).await.unwrap_or_default();
     let liked_ids = helpers::load_liked(&db).await.unwrap_or_default();
 
-    let state = Arc::new(Mutex::new(StateStruct {
-        current_song: None,
-        queue: VecDeque::new(),
-        clients: vec![],
-        index,
-        sink: Arc::new(sink),
-        audio: None,
-        theme: theme_thread::get_config(),
-        volume: 1.0,
-        shuffle: false,
-        repeat: 0,
-        recently_played,
-        liked_ids,
-        db,
-    }));
+    let state: State = Arc::new_cyclic(|self_handle| {
+        Mutex::new(StateStruct {
+            current_song: None,
+            queue: VecDeque::new(),
+            clients: vec![],
+            index,
+            sink: Arc::new(sink),
+            audio: None,
+            theme: theme_thread::get_config(),
+            volume: 1.0,
+            shuffle: false,
+            repeat: 0,
+            recently_played,
+            liked_ids,
+            self_handle: self_handle.clone(),
+            db,
+        })
+    });
 
     let state_clone = state.clone();
     tokio::spawn(async move { watcher_thread::init(state_clone).await });
@@ -106,6 +109,9 @@ async fn async_main() -> std::io::Result<()> {
     tokio::spawn(async move { theme_thread::init(state_clone).await });
 
     let path = PathBuf::from(SOCKFILE);
+    // A stale socket file from a prior ungraceful exit (crash, SIGKILL) would
+    // otherwise make bind() fail forever, since nothing else ever unlinks it.
+    let _ = std::fs::remove_file(&path);
     let listener = UnixListener::bind(path).unwrap_or_else(|err| {
         tracing::error!("Error: {err}");
         std::process::exit(1)

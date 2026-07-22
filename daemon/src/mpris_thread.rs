@@ -176,7 +176,6 @@ pub async fn controller(
                 .unwrap_or(Time::ZERO);
             let volume = sl.sink.volume() as f64;
 
-            // Collect song metadata before dropping the lock
             let song_snapshot = sl.current_song.as_ref().map(|s| {
                 (
                     s.id,
@@ -188,7 +187,6 @@ pub async fn controller(
             });
             drop(sl);
 
-            // Update metadata when the current song changes
             if current_id != last_song_id {
                 last_song_id = current_id;
                 last_paused = None; // force status re-emit after song change
@@ -217,7 +215,6 @@ pub async fn controller(
                 }
             }
 
-            // Update playback status when it changes
             if has_song && last_paused != Some(is_paused) {
                 last_paused = Some(is_paused);
                 let status = if is_paused {
@@ -241,7 +238,6 @@ pub async fn controller(
             last_position = position;
             last_tick = Instant::now();
 
-            // Keep MPRIS volume in sync with the sink
             let _ = player.set_volume(volume).await;
         }
     };

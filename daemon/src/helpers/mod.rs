@@ -4,7 +4,6 @@ mod index;
 mod liked_store;
 mod playlist;
 use crate::types::*;
-use anyhow::Ok;
 use aurora_protocol::Response;
 pub use history::*;
 pub use index::*;
@@ -29,19 +28,6 @@ pub async fn send_to_all(state: &State, response: &Response) -> anyhow::Result<(
         let _ = send_to_client(client, response).await;
     }
     Ok(())
-}
-
-pub fn trigger_art_for(state: State, pending: Vec<(Uuid, std::path::PathBuf, db::Db)>) {
-    for (id, path, db) in pending {
-        let state = state.clone();
-        tokio::spawn(async move {
-            if let Some(art_path) = extract_art(id, path, db).await {
-                if let Some(song) = state.lock().await.index.get_mut(&id) {
-                    song.art_path = Some(art_path);
-                }
-            }
-        });
-    }
 }
 
 pub async fn extract_art(id: Uuid, audio_path: std::path::PathBuf, db: db::Db) -> Option<std::path::PathBuf> {

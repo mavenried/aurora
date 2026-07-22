@@ -1,5 +1,6 @@
 use crate::*;
 use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 use uuid::Uuid;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -59,4 +60,5 @@ pub enum Response {
     ArtistList(Vec<String>),
     LastPlayed(Vec<Song>),
     LikedSongs(Vec<Song>),
+    ArtReady { id: Uuid, art_path: PathBuf },
 }

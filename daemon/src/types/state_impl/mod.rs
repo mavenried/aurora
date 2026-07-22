@@ -1,9 +1,10 @@
-use crate::types::{GetReturn, SongIndex, State, WriteSocket};
-use aurora_protocol::{Song, SongMeta, Status, Theme};
+use crate::types::{GetReturn, SongIndex, WriteSocket};
+use aurora_protocol::{Response, Song, SongMeta, Status, Theme};
 use rodio::Sink;
 use std::collections::{HashSet, VecDeque};
-use std::sync::Arc;
+use std::sync::{Arc, Weak};
 use std::time::Duration;
+use tokio::sync::Mutex;
 use uuid::Uuid;
 
 use crate::helpers::db::Db;
@@ -22,6 +23,7 @@ pub struct StateStruct {
     pub recently_played: VecDeque<Uuid>,
     pub liked_ids: HashSet<Uuid>,
     pub db: Db,
+    pub self_handle: Weak<Mutex<StateStruct>>,
 }
 
 mod playback;
@@ -47,7 +49,7 @@ impl StateStruct {
         }
     }
 
-    pub async fn add(&mut self, state: &State) {
+    pub async fn add(&mut self) {
         if let Some(song) = &self.current_song {
             let song_uuid = song.id;
             let path = self.index.get(&song_uuid).unwrap().path.clone();
@@ -64,18 +66,7 @@ impl StateStruct {
             }
             self.sink.play();
 
-            if self.index.get(&song_uuid).is_some_and(|s| s.art_path.is_none()) {
-                let db = self.db.clone();
-                let state = state.clone();
-                tokio::spawn(async move {
-                    if let Some(art_path) = crate::helpers::extract_art(song_uuid, path, db).await {
-                        let mut s = state.lock().await;
-                        if let Some(song) = s.index.get_mut(&song_uuid) {
-                            song.art_path = Some(art_path);
-                        }
-                    }
-                });
-            }
+            self.get_art(song_uuid);
 
             crate::helpers::push_history(&mut self.recently_played, song_uuid);
             let history = self.recently_played.clone();
@@ -108,14 +99,31 @@ impl StateStruct {
         self.sink.is_paused()
     }
 
-    pub fn pending_art(&self, ids: &[Uuid]) -> Vec<(Uuid, std::path::PathBuf, Db)> {
-        ids.iter()
-            .filter_map(|&id| {
-                let meta = self.index.get(&id)?;
-                meta.art_path
-                    .is_none()
-                    .then(|| (id, meta.path.clone(), self.db.clone()))
-            })
-            .collect()
+    /// Fire-and-forget: if `id`'s art hasn't been extracted yet, spawn a task to
+    /// extract it and write it back into the shared index once done.
+    pub fn get_art(&mut self, id: Uuid) {
+        let Some(meta) = self.index.get(&id) else {
+            return;
+        };
+        if meta.art_path.is_some() {
+            return;
+        }
+        let path = meta.path.clone();
+        let db = self.db.clone();
+        let Some(state) = self.self_handle.upgrade() else {
+            return;
+        };
+        tokio::spawn(async move {
+            if let Some(art_path) = crate::helpers::extract_art(id, path, db).await {
+                {
+                    let mut s = state.lock().await;
+                    if let Some(song) = s.index.get_mut(&id) {
+                        song.art_path = Some(art_path.clone());
+                    }
+                }
+                let _ = crate::helpers::send_to_all(&state, &Response::ArtReady { id, art_path })
+                    .await;
+            }
+        });
     }
 }

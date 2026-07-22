@@ -27,6 +27,17 @@ fn hex_to_u8(hex: String) -> slint::Color {
     slint::Color::from_rgb_u8(r, g, b)
 }
 
+fn patch_art(songs: &mut [aurora_protocol::Song], id: uuid::Uuid, art_path: &PathBuf) -> bool {
+    let mut touched = false;
+    for song in songs.iter_mut() {
+        if song.id == id {
+            song.art_path = Some(art_path.clone());
+            touched = true;
+        }
+    }
+    touched
+}
+
 pub fn album_art_from_data(data: &[u8]) -> anyhow::Result<SharedPixelBuffer<Rgba8Pixel>> {
     let img = image::load_from_memory(data)?;
     let rgba = img.to_rgba8();
@@ -262,6 +273,52 @@ async fn unix_recver(
                 }
                 state.update_last_played(app.clone()).await;
             }
+            Response::ArtReady { id, art_path } => {
+                let mut s = state.lock().await;
+                let redraw_queue = patch_art(&mut s.queue, id, &art_path);
+                let redraw_search = patch_art(&mut s.search_results, id, &art_path);
+                let redraw_artist = patch_art(&mut s.artist_songs, id, &art_path);
+                let redraw_last_played = patch_art(&mut s.last_played, id, &art_path);
+                let redraw_liked = patch_art(&mut s.liked_songs, id, &art_path);
+                let redraw_playlist = s
+                    .playlist_result
+                    .as_mut()
+                    .is_some_and(|result| patch_art(&mut result.songs, id, &art_path));
+                let is_current = id.to_string() == s.current_song_id;
+
+                if redraw_queue {
+                    s.update_queue(app.clone()).await;
+                }
+                if redraw_search {
+                    s.update_search_results(app.clone()).await;
+                }
+                if redraw_artist {
+                    s.update_artist_songs(app.clone()).await;
+                }
+                if redraw_last_played {
+                    s.update_last_played(app.clone()).await;
+                }
+                if redraw_liked {
+                    s.update_liked_songs(app.clone()).await;
+                }
+                if redraw_playlist {
+                    s.update_playlist_results(app.clone()).await;
+                }
+
+                if is_current {
+                    s.current_art_path = Some(art_path.clone());
+                    let default_art = s.default_art_buffer.clone();
+                    drop(s);
+                    let buf = std::fs::read(&art_path)
+                        .ok()
+                        .and_then(|data| album_art_from_data(&data).ok())
+                        .unwrap_or(default_art);
+                    let _ = app.upgrade_in_event_loop(move |aurora| {
+                        aurora.set_has_art(true);
+                        aurora.set_AlbumArt(Image::from_rgba8(buf));
+                    });
+                }
+            }
             other => tracing::info!("{other:?}"),
         }
     }
@@ -269,14 +326,18 @@ async fn unix_recver(
 
 pub async fn interface(app: slint::Weak<AuroraPlayer>) -> anyhow::Result<()> {
     let mut stream: Option<UnixStream> = None;
+    let mut spawned_daemon = false;
 
     while stream.is_none() {
         let path = PathBuf::from("/tmp/aurora-daemon.sock");
-        if let Ok(s) = UnixStream::connect(path).await {
+        if let Ok(s) = UnixStream::connect(&path).await {
             tracing::info!("Connected to the daemon.");
             stream = Some(s);
         } else {
-            Command::new("aurora-daemon").spawn()?;
+            if !spawned_daemon {
+                Command::new("aurora-daemon").spawn()?;
+                spawned_daemon = true;
+            }
             std::thread::sleep(Duration::from_secs(1));
         }
     }

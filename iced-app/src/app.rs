@@ -515,6 +515,8 @@ impl AuroraApp {
             Response::Error { err_id, err_msg } => {
                 tracing::warn!("Daemon error {err_id}: {err_msg}");
             }
+            // Not wired up in the iced experiment; the Slint app is the maintained client.
+            Response::ArtReady { .. } => {}
         }
     }
 

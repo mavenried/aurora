@@ -99,7 +99,6 @@ fn read_tags(path: &PathBuf) -> Option<(String, Vec<String>, Duration)> {
 }
 
 pub async fn build_index(music_dir: &PathBuf, db: &Db) -> std::io::Result<SongIndex> {
-    // Step 1: Walk music_dir, collect (path, mtime) for audio files
     let mut fs_files: Vec<(PathBuf, u64)> = Vec::new();
     for entry in WalkDir::new(music_dir)
         .into_iter()
@@ -126,7 +125,6 @@ pub async fn build_index(music_dir: &PathBuf, db: &Db) -> std::io::Result<SongIn
 
     let total_files = fs_files.len();
 
-    // Step 2: Load entire songs table from DB into path-keyed HashMap
     let db_clone = db.clone();
     let cache: HashMap<String, CachedEntry> = tokio::task::spawn_blocking(move || {
         let conn = db_clone.lock().unwrap();
@@ -169,13 +167,11 @@ pub async fn build_index(music_dir: &PathBuf, db: &Db) -> std::io::Result<SongIn
 
     let cached_count = cache.len();
 
-    // Build filesystem path set for stale detection
     let fs_path_set: HashSet<String> = fs_files
         .iter()
         .map(|(p, _)| p.display().to_string())
         .collect();
 
-    // Step 3: For each file, decide cache hit or rescan
     struct UpsertEntry {
         id: String,
         path: String,
@@ -199,7 +195,14 @@ pub async fn build_index(music_dir: &PathBuf, db: &Db) -> std::io::Result<SongIn
                     let artists: Vec<String> =
                         serde_json::from_str(&cached.artists_json).unwrap_or_default();
                     let duration = Duration::from_millis(cached.dur_ms as u64);
-                    let art_path = cached.art_path.as_ref().map(PathBuf::from);
+                    // Art cache dir may have been cleared independently of the DB;
+                    // drop stale paths so extract_art() re-runs instead of the
+                    // client trying to load a file that no longer exists.
+                    let art_path = cached
+                        .art_path
+                        .as_ref()
+                        .map(PathBuf::from)
+                        .filter(|p| p.exists());
                     let songmeta = SongMeta {
                         id,
                         title: cached.title.clone(),
@@ -216,8 +219,13 @@ pub async fn build_index(music_dir: &PathBuf, db: &Db) -> std::io::Result<SongIn
 
         // Cache miss or mtime changed — read tags via symphonia
         let id = Uuid::new_v5(&Uuid::NAMESPACE_URL, path_str.as_bytes());
-        // Preserve existing art_path if the song was previously indexed
-        let existing_art = cache.get(&path_str).and_then(|c| c.art_path.clone());
+        // Preserve existing art_path if the song was previously indexed and the
+        // art file is still actually on disk (the art cache dir can be cleared
+        // independently of the DB).
+        let existing_art = cache
+            .get(&path_str)
+            .and_then(|c| c.art_path.clone())
+            .filter(|p| PathBuf::from(p).exists());
 
         if let Some((title, artists, duration)) = read_tags(path) {
             let artists_json = serde_json::to_string(&artists).unwrap_or_else(|_| "[]".to_string());
@@ -253,14 +261,12 @@ pub async fn build_index(music_dir: &PathBuf, db: &Db) -> std::io::Result<SongIn
         rescanned
     );
 
-    // Collect stale paths (in DB but no longer on disk)
     let stale_paths: Vec<String> = cache
         .keys()
         .filter(|p| !fs_path_set.contains(*p))
         .cloned()
         .collect();
 
-    // Step 4: Upsert changed/new, delete stale — all in one transaction
     let db_clone = db.clone();
     tokio::task::spawn_blocking(move || {
         let conn = db_clone.lock().unwrap();
