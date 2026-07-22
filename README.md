@@ -7,6 +7,8 @@ A music player.
 
 Indev by [@mavenried](https://github.com/mavenried).
 
+See the [wiki](https://github.com/mavenried/aurora/wiki) for further documentation.
+
 ## Overview
 
 Aurora is a local music player built in Rust. It follows a daemon/client architecture: a background daemon manages playback and library state, while a [Slint](https://slint.dev)-based GUI connects to it over a Unix socket.
