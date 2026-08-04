@@ -158,6 +158,18 @@ export component AuroraPlayer inherits Window {
                 root.clear-song-selection();
                 return EventResult.accept;
             }
+            if event.text == Key.Space {
+                root.pause();
+                return EventResult.accept;
+            }
+            if event.text == Key.RightArrow {
+                root.seek(min(root.position + 5000, root.duration));
+                return EventResult.accept;
+            }
+            if event.text == Key.LeftArrow {
+                root.seek(max(root.position - 5000, 0));
+                return EventResult.accept;
+            }
             EventResult.reject
         }
 
