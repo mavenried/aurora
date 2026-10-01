@@ -23,6 +23,167 @@ pub fn icon_sized(name: &str, px: i32) -> gtk::Image {
     img
 }
 
+struct SettingsBuilt {
+    page: gtk::Box,
+    colorways: gtk::Switch,
+    theme: gtk::Switch,
+    compact_rows: gtk::Switch,
+    smooth_scrolling: gtk::Switch,
+    remember_volume: gtk::Switch,
+    show_album_art: gtk::Switch,
+}
+
+fn settings_page() -> SettingsBuilt {
+    let page = gtk::Box::new(gtk::Orientation::Vertical, 0);
+    page.add_css_class("app-surface");
+    page.set_margin_start(32);
+    page.set_margin_end(32);
+    page.set_margin_top(28);
+    page.set_margin_bottom(28);
+
+    let title = gtk::Label::new(Some("Settings"));
+    title.add_css_class("txt1");
+    title.add_css_class("title-20");
+    title.set_halign(gtk::Align::Start);
+    page.append(&title);
+
+    let subtitle = gtk::Label::new(Some("Customize the look and behavior of Aurora Player."));
+    subtitle.add_css_class("txt2");
+    subtitle.set_halign(gtk::Align::Start);
+    subtitle.set_margin_top(4);
+    subtitle.set_margin_bottom(22);
+    page.append(&subtitle);
+
+    let appearance = section_label("Appearance");
+    page.append(&appearance);
+    let colorways = setting_switch("Album art colorways", "Tint the interface using the current album art.", false);
+    let theme = setting_switch("Dark appearance", "Use Aurora's dark palette.", true);
+    page.append(&colorways.0);
+    page.append(&theme.0);
+
+    let playback = section_label("Playback");
+    playback.set_margin_top(24);
+    page.append(&playback);
+    let show_album_art = setting_switch("Show album art", "Show artwork in the player bar.", true);
+    let remember_volume = setting_switch("Remember volume", "Restore the player volume when Aurora starts.", false);
+    page.append(&show_album_art.0);
+    page.append(&remember_volume.0);
+
+    let interface = section_label("Interface");
+    interface.set_margin_top(24);
+    page.append(&interface);
+    let compact_rows = setting_switch("Compact song rows", "Use less vertical space in song lists.", false);
+    let smooth_scrolling = setting_switch("Smooth scrolling", "Animate scrolling in song lists.", true);
+    page.append(&compact_rows.0);
+    page.append(&smooth_scrolling.0);
+
+    let reset = gtk::Button::with_label("Reset settings");
+    reset.add_css_class("pill-btn");
+    reset.set_halign(gtk::Align::Start);
+    reset.set_margin_top(28);
+    page.append(&reset);
+
+    SettingsBuilt {
+        page,
+        colorways: colorways.1,
+        theme: theme.1,
+        compact_rows: compact_rows.1,
+        smooth_scrolling: smooth_scrolling.1,
+        remember_volume: remember_volume.1,
+        show_album_art: show_album_art.1,
+    }
+}
+
+fn section_label(text: &str) -> gtk::Label {
+    let label = gtk::Label::new(Some(text));
+    label.add_css_class("accent");
+    label.add_css_class("title-15");
+    label.set_halign(gtk::Align::Start);
+    label
+}
+
+fn setting_switch(title: &str, description: &str, active: bool) -> (gtk::Box, gtk::Switch) {
+    let row = gtk::Box::new(gtk::Orientation::Horizontal, 16);
+    row.set_margin_top(8);
+    row.set_margin_bottom(8);
+    let text = gtk::Box::new(gtk::Orientation::Vertical, 2);
+    text.set_hexpand(true);
+    let title_label = gtk::Label::new(Some(title));
+    title_label.add_css_class("txt1");
+    title_label.set_halign(gtk::Align::Start);
+    let description_label = gtk::Label::new(Some(description));
+    description_label.add_css_class("txt2");
+    description_label.add_css_class("subtle-13");
+    description_label.set_halign(gtk::Align::Start);
+    text.append(&title_label);
+    text.append(&description_label);
+    let switch = gtk::Switch::new();
+    switch.set_active(active);
+    switch.set_valign(gtk::Align::Center);
+    row.append(&text);
+    row.append(&switch);
+    (row, switch)
+}
+
+fn wire_settings(shared: &Shared) {
+    let colorways = shared.borrow().widgets.settings_colorways.clone();
+    let shared_c = shared.clone();
+    colorways.connect_active_notify(move |switch| {
+        crate::app::send(&shared_c, Request::SetFollowArtColorway(switch.is_active()));
+    });
+}
+
+fn now_playing_page() -> (gtk::Box, gtk::Picture, gtk::Label, gtk::Label, gtk::Scale, gtk::Button) {
+    let page = gtk::Box::new(gtk::Orientation::Vertical, 0);
+    page.add_css_class("app-surface");
+    page.set_margin_start(32);
+    page.set_margin_end(32);
+    page.set_margin_top(20);
+    page.set_margin_bottom(28);
+
+    let back = gtk::Button::from_icon_name("go-previous-symbolic");
+    back.add_css_class("circle-btn");
+    back.set_halign(gtk::Align::Start);
+    back.set_tooltip_text(Some("Back"));
+    page.append(&back);
+
+    let art = gtk::Picture::new();
+    art.add_css_class("thumb");
+    art.set_content_fit(gtk::ContentFit::Cover);
+    art.set_hexpand(true);
+    art.set_vexpand(true);
+    art.set_halign(gtk::Align::Fill);
+    art.set_valign(gtk::Align::Fill);
+
+    let art_frame = gtk::AspectFrame::new(0.5, 0.5, 1.0, true);
+    art_frame.set_size_request(360, 360);
+    art_frame.set_halign(gtk::Align::Center);
+    art_frame.set_valign(gtk::Align::Center);
+    art_frame.set_margin_top(12);
+    art_frame.set_margin_bottom(22);
+    art_frame.set_child(Some(&art));
+    page.append(&art_frame);
+
+    let title = gtk::Label::new(Some("Nothing Playing"));
+    title.add_css_class("txt1");
+    title.add_css_class("title-20");
+    title.set_halign(gtk::Align::Center);
+    title.set_ellipsize(gtk::pango::EllipsizeMode::End);
+    page.append(&title);
+    let artist = gtk::Label::new(Some("No Artist"));
+    artist.add_css_class("txt2");
+    artist.add_css_class("subtle-14");
+    artist.set_halign(gtk::Align::Center);
+    page.append(&artist);
+
+    let seek = gtk::Scale::with_range(gtk::Orientation::Horizontal, 0.0, 1.0, 1.0);
+    seek.set_draw_value(false);
+    seek.set_hexpand(true);
+    seek.set_margin_top(24);
+    page.append(&seek);
+    (page, art, title, artist, seek, back)
+}
+
 /// Removes all children of a `gtk::Box` before repopulating it with rebuilt content.
 pub fn clear(container: &gtk::Box) {
     while let Some(child) = container.first_child() {
@@ -60,11 +221,18 @@ pub fn build_root(app: &adw::Application) -> Shared {
         .build();
 
     let sidebar_col = gtk::Box::new(gtk::Orientation::Vertical, 0);
+    sidebar_col.add_css_class("app-surface");
     sidebar_col.append(&sidebar_built.top_nav);
     sidebar_col.append(&playlists_scroller);
 
+    let sidebar_header = adw::HeaderBar::new();
+    let sidebar_title_label = gtk::Label::new(Some("Aurora Player"));
+    sidebar_title_label.add_css_class("txt1");
+    sidebar_title_label.add_css_class("title-15");
+    sidebar_header.set_title_widget(Some(&sidebar_title_label));
+
     let sidebar_toolbar = adw::ToolbarView::new();
-    sidebar_toolbar.add_top_bar(&adw::HeaderBar::new());
+    sidebar_toolbar.add_top_bar(&sidebar_header);
     sidebar_toolbar.set_content(Some(&sidebar_col));
     let sidebar_page = adw::NavigationPage::builder().title("Aurora Player").child(&sidebar_toolbar).build();
 
@@ -96,6 +264,7 @@ pub fn build_root(app: &adw::Application) -> Shared {
         .build();
 
     let search_page = gtk::Box::new(gtk::Orientation::Vertical, 0);
+    search_page.add_css_class("app-surface");
     search_page.append(&search_header);
     search_page.append(&search_scroller);
 
@@ -131,6 +300,7 @@ pub fn build_root(app: &adw::Application) -> Shared {
         .build();
 
     let detail_page = gtk::Box::new(gtk::Orientation::Vertical, 0);
+    detail_page.add_css_class("app-surface");
     detail_page.append(&detail_header);
     detail_page.append(&detail_scroller);
 
@@ -157,14 +327,22 @@ pub fn build_root(app: &adw::Application) -> Shared {
         .build();
 
     let queue_page = gtk::Box::new(gtk::Orientation::Vertical, 0);
+    queue_page.add_css_class("app-surface");
     queue_page.append(&queue_header);
     queue_page.append(&queue_scroller);
+
+    let settings = settings_page();
+    let settings_page = settings.page.clone();
+    let (now_playing_page, expanded_art, expanded_title_lbl, expanded_artist_lbl, expanded_seek_scale, now_playing_back) =
+        now_playing_page();
 
     // ---- Content stack + navigation split view ----
     let content_stack = gtk::Stack::new();
     content_stack.add_named(&search_page, Some("search"));
     content_stack.add_named(&detail_page, Some("detail"));
     content_stack.add_named(&queue_page, Some("queue"));
+    content_stack.add_named(&settings_page, Some("settings"));
+    content_stack.add_named(&now_playing_page, Some("now-playing"));
     content_stack.set_visible_child_name("search");
     content_stack.set_vexpand(true);
 
@@ -237,6 +415,16 @@ pub fn build_root(app: &adw::Application) -> Shared {
         detail_list_box,
         queue_list_box,
         queue_scroller,
+        settings_colorways: settings.colorways.clone(),
+        settings_theme: settings.theme.clone(),
+        settings_compact_rows: settings.compact_rows.clone(),
+        settings_smooth_scrolling: settings.smooth_scrolling.clone(),
+        settings_remember_volume: settings.remember_volume.clone(),
+        settings_show_album_art: settings.show_album_art.clone(),
+        expanded_art,
+        expanded_title_lbl,
+        expanded_artist_lbl,
+        expanded_seek_scale,
         player_art: player_built.art.clone(),
         player_title_lbl: player_built.title_lbl.clone(),
         player_artist_lbl: player_built.artist_lbl.clone(),
@@ -256,6 +444,35 @@ pub fn build_root(app: &adw::Application) -> Shared {
     // ---- Wiring (now that `shared` exists) ----
     sidebar::wire(&shared, &sidebar_built);
     player::wire(&shared, &player_built);
+    wire_settings(&shared);
+    {
+        let stack = content_stack.clone();
+        let click = gtk::GestureClick::new();
+        click.set_button(1);
+        let shared_c = shared.clone();
+        click.connect_pressed(move |_, _, _, _| {
+            stack.set_visible_child_name("now-playing");
+            if let Some(id) = shared_c.borrow().state.current_song.as_ref().map(|song| song.id) {
+                send(&shared_c, Request::GetHighResArt(id));
+            }
+        });
+        player_built.art.add_controller(click);
+    }
+    {
+        let shared_c = shared.clone();
+        now_playing_back.connect_clicked(move |_| {
+            let target = shared_c.borrow().nav.clone();
+            set_nav(&shared_c, target);
+        });
+    }
+    {
+        let shared_c = shared.clone();
+        let expanded_seek = shared.borrow().widgets.expanded_seek_scale.clone();
+        expanded_seek.connect_change_value(move |_, _, value| {
+            send(&shared_c, Request::Seek(std::time::Duration::from_millis(value.max(0.0) as u64)));
+            gtk::glib::Propagation::Proceed
+        });
+    }
 
     {
         let shared = shared.clone();
@@ -309,6 +526,10 @@ pub fn set_nav(shared: &Shared, target: NavTarget) {
         NavTarget::Queue => {
             stack.set_visible_child_name("queue");
             content_page.set_title("Queue");
+        }
+        NavTarget::Settings => {
+            stack.set_visible_child_name("settings");
+            content_page.set_title("Settings");
         }
         NavTarget::Liked => {
             stack.set_visible_child_name("detail");

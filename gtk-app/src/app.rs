@@ -44,6 +44,16 @@ pub struct Widgets {
 
     pub queue_list_box: gtk::Box,
     pub queue_scroller: gtk::ScrolledWindow,
+    pub settings_colorways: gtk::Switch,
+    pub settings_theme: gtk::Switch,
+    pub settings_compact_rows: gtk::Switch,
+    pub settings_smooth_scrolling: gtk::Switch,
+    pub settings_remember_volume: gtk::Switch,
+    pub settings_show_album_art: gtk::Switch,
+    pub expanded_art: gtk::Picture,
+    pub expanded_title_lbl: gtk::Label,
+    pub expanded_artist_lbl: gtk::Label,
+    pub expanded_seek_scale: gtk::Scale,
 
     pub player_art: gtk::Picture,
     pub player_title_lbl: gtk::Label,
@@ -64,6 +74,13 @@ pub struct Widgets {
 pub struct AppState {
     pub state: State,
     pub palette: Palette,
+    pub base_palette: Palette,
+    pub album_art_colorways: bool,
+    pub compact_rows: bool,
+    pub show_album_art: bool,
+    pub smooth_scrolling: bool,
+    pub remember_volume: bool,
+    pub saved_volume: Option<f32>,
     pub req_tx: Option<async_channel::Sender<Request>>,
     pub connected: bool,
 
@@ -83,6 +100,7 @@ pub struct AppState {
     pub default_art: gdk::Texture,
 
     pub widgets: Widgets,
+    pub highres_art: std::collections::HashMap<uuid::Uuid, std::path::PathBuf>,
 }
 
 pub type Shared = Rc<RefCell<AppState>>;
@@ -126,6 +144,13 @@ impl AppState {
         Rc::new(RefCell::new(AppState {
             state: State::default(),
             palette: Palette::default(),
+            base_palette: Palette::default(),
+            album_art_colorways: false,
+            compact_rows: false,
+            show_album_art: true,
+            smooth_scrolling: true,
+            remember_volume: false,
+            saved_volume: None,
             req_tx: None,
             connected: false,
             nav: NavTarget::default(),
@@ -135,10 +160,23 @@ impl AppState {
             art_cache: HashMap::new(),
             default_art,
             widgets,
+            highres_art: std::collections::HashMap::new(),
         }))
     }
 
     pub fn art_texture(&mut self, path: &Option<PathBuf>) -> gdk::Texture {
+        self.art_texture_sized(path, ART_SIZE)
+    }
+
+    pub fn art_texture_sized(&mut self, path: &Option<PathBuf>, size: i32) -> gdk::Texture {
+        if size != ART_SIZE {
+            return path
+                .as_ref()
+                .and_then(|path| scaled_texture_from_file(path, size))
+                .or_else(|| scaled_texture_from_bytes(DEFAULT_ART, size))
+                .unwrap_or_else(|| self.default_art.clone());
+        }
+
         let Some(path) = path else {
             return self.default_art.clone();
         };
@@ -180,6 +218,25 @@ pub fn handle_daemon_event(shared: &Shared, event: DaemonEvent) {
     }
 }
 
+fn apply_colorway_theme(shared: &Shared) {
+    let (base, enabled, art_path, css_provider) = {
+        let s = shared.borrow();
+        (
+            s.base_palette.clone(),
+            s.album_art_colorways,
+            s.state.current_song.as_ref().and_then(|song| song.art_path.clone()),
+            s.widgets.css_provider.clone(),
+        )
+    };
+    let palette = if enabled {
+        crate::theme::from_album_art(&art_path, &base)
+    } else {
+        base
+    };
+    shared.borrow_mut().palette = palette.clone();
+    css_provider.load_from_string(&crate::theme::css(&palette));
+}
+
 fn handle_response(shared: &Shared, response: Response) {
     match response {
         Response::Status(status) => {
@@ -197,6 +254,21 @@ fn handle_response(shared: &Shared, response: Response) {
                 prev_id != new_id
             };
             ui::player::update(shared);
+            if song_changed {
+                apply_colorway_theme(shared);
+                let now_playing_open = shared
+                    .borrow()
+                    .widgets
+                    .content_stack
+                    .visible_child_name()
+                    .as_deref()
+                    == Some("now-playing");
+                if now_playing_open {
+                    if let Some(id) = shared.borrow().state.current_song.as_ref().map(|song| song.id) {
+                        send(shared, Request::GetHighResArt(id));
+                    }
+                }
+            }
             // The accent-bar highlighting the playing row is baked in at
             // build time, so as the track advances naturally (not via a
             // user action that already rebuilds these lists) the lists
@@ -226,9 +298,17 @@ fn handle_response(shared: &Shared, response: Response) {
         }
         Response::Theme(theme) => {
             let palette: Palette = theme.into();
-            shared.borrow_mut().palette = palette.clone();
-            let css_provider = shared.borrow().widgets.css_provider.clone();
-            css_provider.load_from_string(&crate::theme::css(&palette));
+            let follow = palette.follow_art_colorway;
+            let colorways_switch = shared.borrow().widgets.settings_colorways.clone();
+            {
+                let mut s = shared.borrow_mut();
+                s.base_palette = palette;
+                s.album_art_colorways = follow;
+            }
+            if colorways_switch.is_active() != follow {
+                colorways_switch.set_active(follow);
+            }
+            apply_colorway_theme(shared);
         }
         Response::Volume(v) => {
             shared.borrow_mut().state.volume = v;
@@ -271,12 +351,19 @@ fn handle_response(shared: &Shared, response: Response) {
                         }
                     }
                 }
+
                 if let Some(pl) = s.state.playlist_result.as_mut() {
                     for song in pl.songs.iter_mut() {
                         if song.id == id {
                             song.art_path = Some(art_path.clone());
                             touched = true;
                         }
+                    }
+                }
+                if let Some(song) = s.state.current_song.as_mut() {
+                    if song.id == id {
+                        song.art_path = Some(art_path.clone());
+                        touched = true;
                     }
                 }
                 touched
@@ -286,7 +373,13 @@ fn handle_response(shared: &Shared, response: Response) {
                 ui::search::rebuild_results(shared);
                 ui::detail::rebuild(shared);
                 ui::player::update(shared);
+                apply_colorway_theme(shared);
             }
+        }
+        Response::HighResArtReady { id, art_path } => {
+            shared.borrow_mut().highres_art.insert(id, art_path.clone());
+            ui::player::replace_expanded_art(shared, id, &art_path);
+            ui::player::update(shared);
         }
     }
 }

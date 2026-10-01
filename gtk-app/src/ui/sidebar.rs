@@ -16,6 +16,7 @@ pub struct Built {
 
     pub search_row: gtk::Box,
     pub queue_row: gtk::Box,
+    pub settings_row: gtk::Box,
     pub liked_row: gtk::Box,
     pub recent_row: gtk::Box,
     pub add_btn: gtk::Button,
@@ -31,11 +32,13 @@ pub fn build() -> Built {
 
     let search_row = plain_row("system-search-symbolic", "Search");
     let queue_row = plain_row("view-list-symbolic", "Queue");
+    let settings_row = plain_row("emblem-system-symbolic", "Settings");
     let liked_row = plain_row("emblem-favorite-symbolic", "Liked Songs");
     let recent_row = plain_row("document-open-recent-symbolic", "Recently Played");
 
     top_nav.append(&search_row);
     top_nav.append(&queue_row);
+    top_nav.append(&settings_row);
 
     let sep = gtk::Separator::new(gtk::Orientation::Horizontal);
     sep.set_margin_top(8);
@@ -75,6 +78,7 @@ pub fn build() -> Built {
         playlists_section,
         search_row,
         queue_row,
+        settings_row,
         liked_row,
         recent_row,
         add_btn,
@@ -87,6 +91,7 @@ pub fn wire(shared: &Shared, built: &Built) {
 
     wire_row(shared, &built.search_row, NavTarget::Search);
     wire_row(shared, &built.queue_row, NavTarget::Queue);
+    wire_row(shared, &built.settings_row, NavTarget::Settings);
     wire_row(shared, &built.liked_row, NavTarget::Liked);
     wire_row(shared, &built.recent_row, NavTarget::Recent);
 

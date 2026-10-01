@@ -299,6 +299,10 @@ pub fn update(shared: &Shared) {
     let art = w.player_art.clone();
     let title_lbl = w.player_title_lbl.clone();
     let artist_lbl = w.player_artist_lbl.clone();
+    let expanded_art = w.expanded_art.clone();
+    let expanded_title_lbl = w.expanded_title_lbl.clone();
+    let expanded_artist_lbl = w.expanded_artist_lbl.clone();
+    let expanded_seek_scale = w.expanded_seek_scale.clone();
     let elapsed_lbl = w.elapsed_lbl.clone();
     let duration_lbl = w.duration_lbl.clone();
     let seek_scale = w.seek_scale.clone();
@@ -321,18 +325,30 @@ pub fn update(shared: &Shared) {
     let has_song = s.state.current_song.is_some();
     let liked = s.state.current_song.as_ref().is_some_and(|song| s.state.is_liked(&song.id));
     let art_tex = s.art_texture(&art_path);
+    let expanded_art_path = s
+        .state
+        .current_song
+        .as_ref()
+        .and_then(|song| s.highres_art.get(&song.id).cloned())
+        .or_else(|| art_path.clone());
+    let expanded_art_tex = s.art_texture_sized(&expanded_art_path, 720);
 
     drop(s);
 
     art.set_paintable(Some(&art_tex));
+    expanded_art.set_paintable(Some(&expanded_art_tex));
     title_lbl.set_text(&title);
     artist_lbl.set_text(&artist);
+    expanded_title_lbl.set_text(&title);
+    expanded_artist_lbl.set_text(&artist);
 
     elapsed_lbl.set_text(&format_duration(std::time::Duration::from_millis(position_ms as u64)));
     duration_lbl.set_text(&format_duration(std::time::Duration::from_millis(duration_ms as u64)));
     seek_scale.set_range(0.0, duration_ms);
+    expanded_seek_scale.set_range(0.0, duration_ms);
     if seek_override_ms.is_none() {
         seek_scale.set_value(position_ms);
+        expanded_seek_scale.set_value(position_ms);
     }
     seek_scale.set_sensitive(has_song);
     volume_scale.set_value(volume);
@@ -345,4 +361,15 @@ pub fn update(shared: &Shared) {
     shuffle_btn.set_css_classes(&["circle-btn", "toggle-btn", if shuffle { "active" } else { "" }]);
     repeat_btn.set_css_classes(&["circle-btn", "toggle-btn", if repeat == 1 { "active" } else { "" }]);
     like_btn.set_css_classes(&["circle-btn", "toggle-btn", "like-btn", if liked { "active" } else { "" }]);
+}
+
+pub fn replace_expanded_art(shared: &Shared, id: uuid::Uuid, path: &std::path::Path) {
+    let mut s = shared.borrow_mut();
+    let is_current = s.state.current_song.as_ref().is_some_and(|song| song.id == id);
+    if !is_current {
+        return;
+    }
+
+    let texture = s.art_texture_sized(&Some(path.to_path_buf()), 720);
+    s.widgets.expanded_art.set_paintable(Some(&texture));
 }

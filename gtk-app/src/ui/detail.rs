@@ -21,7 +21,7 @@ pub fn rebuild(shared: &Shared) {
                 _ => ("Loading playlist...".to_string(), vec![], Some(*id)),
             }
         }
-        NavTarget::Search | NavTarget::Queue => return,
+        NavTarget::Search | NavTarget::Queue | NavTarget::Settings => return,
     };
 
     let (title_lbl, list) = {
@@ -46,6 +46,6 @@ pub fn current_song_ids(shared: &Shared) -> Vec<Uuid> {
             .filter(|pl| pl.id == *id)
             .map(|pl| pl.songs.iter().map(|s| s.id).collect())
             .unwrap_or_default(),
-        NavTarget::Search | NavTarget::Queue => vec![],
+        NavTarget::Search | NavTarget::Queue | NavTarget::Settings => vec![],
     }
 }

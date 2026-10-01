@@ -17,6 +17,7 @@ pub enum NavTarget {
     #[default]
     Search,
     Queue,
+    Settings,
     Liked,
     Recent,
     Playlist(Uuid),
