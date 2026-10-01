@@ -14,6 +14,7 @@ pub struct Palette {
     pub acct: Color,
     pub srch: Color,
     pub btns: Color,
+    pub follow_art_colorway: bool,
 }
 
 impl Default for Palette {
@@ -29,6 +30,7 @@ impl Default for Palette {
             acct: hex("#cba6f7"),
             srch: hex("#45475a"),
             btns: hex("#cdd6f4"),
+            follow_art_colorway: false,
         }
     }
 }
@@ -46,6 +48,7 @@ impl From<aurora_protocol::Theme> for Palette {
             acct: hex(&t.acct),
             srch: hex(&t.srch),
             btns: hex(&t.btns),
+            follow_art_colorway: t.follow_art_colorway,
         }
     }
 }

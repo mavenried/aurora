@@ -517,6 +517,7 @@ impl AuroraApp {
             }
             // Not wired up in the iced experiment; the Slint app is the maintained client.
             Response::ArtReady { .. } => {}
+            Response::HighResArtReady { .. } => {}
         }
     }
 

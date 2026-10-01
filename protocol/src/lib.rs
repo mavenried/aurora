@@ -37,4 +37,6 @@ pub struct Theme {
     pub acct: String,
     pub srch: String,
     pub btns: String,
+    #[serde(default)]
+    pub follow_art_colorway: bool,
 }

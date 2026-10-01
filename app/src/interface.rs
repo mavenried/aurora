@@ -203,7 +203,7 @@ async fn unix_recver(
                 state.update_playlists(app.clone()).await;
             }
             Response::Theme(theme) => {
-                let _ = app.upgrade_in_event_loop(|aurora| {
+                let _ = app.upgrade_in_event_loop(move |aurora| {
                     aurora
                         .global::<crate::Theme>()
                         .set_acct(hex_to_u8(theme.acct));
@@ -234,6 +234,9 @@ async fn unix_recver(
                     aurora
                         .global::<crate::Theme>()
                         .set_bgd4(hex_to_u8(theme.bgd4));
+                    aurora
+                        .global::<crate::Theme>()
+                        .set_follow_art_colorway(theme.follow_art_colorway);
                 });
             }
             Response::Volume(volume) => {
@@ -241,6 +244,7 @@ async fn unix_recver(
                     aurora.set_volume(volume);
                 });
             }
+            Response::HighResArtReady { .. } => {}
             Response::ArtistList(list) => {
                 tracing::info!("Received: ArtistList, len:{}", list.len());
                 let mut state_locked = state.lock().await;

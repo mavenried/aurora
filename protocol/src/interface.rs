@@ -40,11 +40,13 @@ pub enum Request {
     SetVolume(f32),
     SetShuffle(bool),
     SetRepeat(u8),
+    SetFollowArtColorway(bool),
     GetArtistList,
     GetLastPlayed,
     LikeSong(Uuid),
     UnlikeSong(Uuid),
     GetLikedSongs,
+    GetHighResArt(Uuid),
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -61,4 +63,5 @@ pub enum Response {
     LastPlayed(Vec<Song>),
     LikedSongs(Vec<Song>),
     ArtReady { id: Uuid, art_path: PathBuf },
+    HighResArtReady { id: Uuid, art_path: PathBuf },
 }
