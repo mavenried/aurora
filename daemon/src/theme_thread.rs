@@ -15,6 +15,7 @@ pub fn get_config() -> Theme {
         acct: "#d3869b".into(),
         srch: "#3c3836".into(),
         btns: "#ebdbb2".into(),
+        follow_art_colorway: false,
     };
     if let Some(mut path) = dirs::config_dir()
         && path.join("aurora-player/config.toml").exists()
@@ -27,6 +28,17 @@ pub fn get_config() -> Theme {
     } else {
         default
     }
+
+}
+
+pub fn save_config(theme: &Theme) -> anyhow::Result<()> {
+    let Some(mut path) = dirs::config_dir() else {
+        return Err(anyhow!("could not load config dir"));
+    };
+    path = path.join("aurora-player");
+    std::fs::create_dir_all(&path)?;
+    std::fs::write(path.join("config.toml"), toml::to_string_pretty(theme)?)?;
+    Ok(())
 }
 
 pub async fn init(state: State) -> anyhow::Result<()> {

@@ -110,11 +110,15 @@ pub async fn handle_client(
             Request::SetVolume(v) => settings::set_volume(&writer, &state, v).await,
             Request::SetShuffle(b) => settings::set_shuffle(&writer, &state, b).await,
             Request::SetRepeat(r) => settings::set_repeat(&writer, &state, r).await,
+            Request::SetFollowArtColorway(enabled) => {
+                settings::set_follow_art_colorway(&state, enabled).await
+            }
             Request::GetArtistList => settings::get_artist_list(&writer, &state).await,
             Request::GetLastPlayed => settings::get_last_played(&writer, &state).await,
             Request::LikeSong(id) => liked::like_song(&writer, &state, id).await,
             Request::UnlikeSong(id) => liked::unlike_song(&writer, &state, id).await,
             Request::GetLikedSongs => liked::get_liked_songs(&writer, &state).await,
+            Request::GetHighResArt(id) => settings::get_highres_art(&writer, &state, id).await,
         } {
             tracing::error!("Err: {err}");
         }

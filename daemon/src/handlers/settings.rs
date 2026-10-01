@@ -24,6 +24,37 @@ pub async fn set_repeat(writer: &WriteSocket, state: &State, repeat: u8) -> anyh
     send_to_client(writer, &Response::Status(state.lock().await.to_status())).await
 }
 
+pub async fn set_follow_art_colorway(state: &State, enabled: bool) -> anyhow::Result<()> {
+    let theme = {
+        let mut state_locked = state.lock().await;
+        state_locked.theme.follow_art_colorway = enabled;
+        state_locked.theme.clone()
+    };
+    crate::theme_thread::save_config(&theme)?;
+    send_to_all(state, &Response::Theme(theme)).await
+}
+
+pub async fn get_highres_art(
+    writer: &WriteSocket,
+    state: &State,
+    id: Uuid,
+) -> anyhow::Result<()> {
+    let path = state.lock().await.index.get(&id).map(|song| song.path.clone());
+    let Some(path) = path else {
+        return send_to_client(
+            writer,
+            &Response::Error { err_id: 4, err_msg: "Song not found".into() },
+        ).await;
+    };
+    let Some(art_path) = crate::helpers::extract_highres_art(id, path).await else {
+        return send_to_client(
+            writer,
+            &Response::Error { err_id: 5, err_msg: "Album art unavailable".into() },
+        ).await;
+    };
+    send_to_client(writer, &Response::HighResArtReady { id, art_path }).await
+}
+
 pub async fn get_artist_list(writer: &WriteSocket, state: &State) -> anyhow::Result<()> {
     let state_locked = state.lock().await;
     let mut artists: Vec<String> = state_locked

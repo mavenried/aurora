@@ -183,6 +183,7 @@ pub async fn controller(
                     s.artists.clone(),
                     s.duration,
                     s.art_path.clone(),
+                    s.path.clone(),
                 )
             });
             drop(sl);
@@ -191,7 +192,7 @@ pub async fn controller(
                 last_song_id = current_id;
                 last_paused = None; // force status re-emit after song change
 
-                if let Some((id, title, artists, duration, art_path)) = song_snapshot {
+                if let Some((id, title, artists, duration, art_path, source_path)) = song_snapshot {
                     let track_id =
                         TrackId::try_from(format!("/me/mavenried/Aurora/track/{}", id.simple()))
                             .unwrap_or(TrackId::NO_TRACK);
@@ -201,7 +202,8 @@ pub async fn controller(
                     meta.set_title(Some(title));
                     meta.set_artist(Some(artists));
                     meta.set_length(Some(Time::from_micros(duration.as_micros() as i64)));
-                    if let Some(art) = art_path {
+                    let highres = crate::helpers::extract_highres_art(id, source_path).await;
+                    if let Some(art) = highres.or(art_path) {
                         meta.set_art_url(Some(format!("file://{}", art.display())));
                     }
                     let _ = player.set_metadata(meta).await;

@@ -36,6 +36,20 @@ pub async fn send_to_all(state: &State, response: &Response) -> anyhow::Result<(
 }
 
 pub async fn extract_art(id: Uuid, audio_path: std::path::PathBuf, db: db::Db) -> Option<std::path::PathBuf> {
+    extract_art_sized(id, audio_path, Some(db), 100, "jpg").await
+}
+
+pub async fn extract_highres_art(id: Uuid, audio_path: std::path::PathBuf) -> Option<std::path::PathBuf> {
+    extract_art_sized(id, audio_path, None, 0, "png").await
+}
+
+async fn extract_art_sized(
+    id: Uuid,
+    audio_path: std::path::PathBuf,
+    db: Option<db::Db>,
+    size: u32,
+    extension: &'static str,
+) -> Option<std::path::PathBuf> {
     tokio::task::spawn_blocking(move || {
         use image::{ImageFormat, ImageReader, imageops::FilterType};
         use lofty::file::TaggedFileExt;
@@ -44,7 +58,11 @@ pub async fn extract_art(id: Uuid, audio_path: std::path::PathBuf, db: db::Db) -
         let outdir = dirs::cache_dir()
             .unwrap_or_else(|| std::path::PathBuf::from("/tmp/"))
             .join("aurora-player");
-        let cache_file = outdir.join(format!("{id}.jpg"));
+        let cache_file = if size == 0 {
+            outdir.join(format!("{id}-highres.{extension}"))
+        } else {
+            outdir.join(format!("{id}-{size}.{extension}"))
+        };
 
         if std::fs::exists(&cache_file).unwrap_or(false) {
             return Some(cache_file);
@@ -62,25 +80,34 @@ pub async fn extract_art(id: Uuid, audio_path: std::path::PathBuf, db: db::Db) -
             .decode()
             .ok()?
             .into_rgb8();
-        let resized = image::imageops::resize(&image, 100, 100, FilterType::Nearest);
+        let resized = if size == 0 {
+            image
+        } else {
+            image::imageops::resize(&image, size, size, FilterType::Lanczos3)
+        };
 
         std::fs::create_dir_all(&outdir).ok()?;
 
         let file = std::fs::File::create(&cache_file).ok()?;
+        let format = if size == 0 { ImageFormat::Png } else { ImageFormat::Jpeg };
         resized
-            .write_to(&mut std::io::BufWriter::new(file), ImageFormat::Jpeg)
+            .write_to(&mut std::io::BufWriter::new(file), format)
             .ok()?;
 
         tracing::debug!("Wrote album art to {cache_file:?}");
 
-        let id_str = id.to_string();
-        let art_str = cache_file.to_string_lossy().to_string();
-        if let Ok(conn) = db.lock() {
-            conn.execute(
-                "UPDATE songs SET art_path = ?1 WHERE id = ?2",
-                rusqlite::params![art_str, id_str],
-            )
-            .ok();
+        if size == 100 {
+            let id_str = id.to_string();
+            let art_str = cache_file.to_string_lossy().to_string();
+            if let Some(db) = db {
+                if let Ok(conn) = db.lock() {
+                    conn.execute(
+                        "UPDATE songs SET art_path = ?1 WHERE id = ?2",
+                        rusqlite::params![art_str, id_str],
+                    )
+                    .ok();
+                }
+            }
         }
 
         Some(cache_file)
