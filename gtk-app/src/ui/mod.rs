@@ -236,6 +236,7 @@ pub fn build_root(app: &adw::Application) -> Shared {
         detail_title_lbl,
         detail_list_box,
         queue_list_box,
+        queue_scroller,
         player_art: player_built.art.clone(),
         player_title_lbl: player_built.title_lbl.clone(),
         player_artist_lbl: player_built.artist_lbl.clone(),

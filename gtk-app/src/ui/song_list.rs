@@ -54,6 +54,8 @@ pub fn song_row(shared: &Shared, song: &Song, current_playlist: Option<Uuid>) ->
     let heart_btn = gtk::Button::new();
     heart_btn.set_has_frame(false);
     heart_btn.add_css_class("circle-btn");
+    heart_btn.add_css_class("toggle-btn");
+    heart_btn.add_css_class("like-btn");
     heart_btn.set_size_request(32, 32);
     if liked {
         heart_btn.add_css_class("active");
@@ -181,4 +183,3 @@ pub fn empty_state(icon_name: &str, title: &str, subtitle: &str) -> gtk::Widget 
     }
     b.upcast()
 }
-

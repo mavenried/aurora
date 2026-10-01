@@ -126,6 +126,7 @@ separator {{ background-color: {bgd3}; min-height: 1px; }}
 .circle-btn:hover {{ background-color: {bgd3}; }}
 .circle-btn:active {{ background-color: {bgd4}; }}
 .circle-btn.active {{ color: {acct}; background-color: alpha({acct}, 0.16); }}
+.circle-btn.toggle-btn.active {{ color: {acct}; background-color: transparent; }}
 
 .play-btn {{ background-color: {bgd3}; color: {txt1}; }}
 .play-btn:hover {{ background-color: {bgd4}; }}

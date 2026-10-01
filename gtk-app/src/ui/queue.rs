@@ -6,9 +6,14 @@ use crate::model::format_duration;
 use crate::ui::{clear, context_menu, song_list};
 
 pub fn rebuild(shared: &Shared) {
-    let container = shared.borrow().widgets.queue_list_box.clone();
+    let (container, scroller) = {
+        let s = shared.borrow();
+        (s.widgets.queue_list_box.clone(), s.widgets.queue_scroller.clone())
+    };
     clear(&container);
+    container.set_vexpand(true);
     container.set_valign(gtk::Align::Start);
+    scroller.set_vscrollbar_policy(gtk::PolicyType::Automatic);
 
     let display: Vec<Song> = {
         let s = shared.borrow();
@@ -16,6 +21,8 @@ pub fn rebuild(shared: &Shared) {
     };
 
     if display.is_empty() {
+        scroller.set_vscrollbar_policy(gtk::PolicyType::Never);
+        container.set_valign(gtk::Align::Fill);
         container.append(&song_list::empty_state("audio-x-generic-symbolic", "Queue is empty", "Add songs to get started"));
         return;
     }

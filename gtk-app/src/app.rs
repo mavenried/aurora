@@ -43,6 +43,7 @@ pub struct Widgets {
     pub detail_list_box: gtk::Box,
 
     pub queue_list_box: gtk::Box,
+    pub queue_scroller: gtk::ScrolledWindow,
 
     pub player_art: gtk::Picture,
     pub player_title_lbl: gtk::Label,
@@ -68,6 +69,13 @@ pub struct AppState {
 
     pub nav: NavTarget,
     pub search_mode: SearchMode,
+
+    /// Set while the user is dragging the seek slider (or has clicked to
+    /// jump it) and not yet released it. `player::update` shows this value
+    /// instead of the daemon's real playback position so incoming Status
+    /// ticks don't yank the slider back mid-drag; the actual `Seek` request
+    /// is only sent once the pointer is released (see `player::wire`).
+    pub seek_override_ms: Option<u64>,
 
     pub sidebar_active_row: Option<gtk::Widget>,
 
@@ -122,6 +130,7 @@ impl AppState {
             connected: false,
             nav: NavTarget::default(),
             search_mode: SearchMode::ByTitle,
+            seek_override_ms: None,
             sidebar_active_row: None,
             art_cache: HashMap::new(),
             default_art,
