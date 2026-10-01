@@ -10,15 +10,20 @@ pub use index::*;
 pub use liked_store::*;
 pub use playlist::*;
 
-use tokio::io::AsyncWriteExt;
+use tokio::{io::AsyncWriteExt, time::timeout};
 use uuid::Uuid;
 
 pub async fn send_to_client(socket: &WriteSocket, response: &Response) -> anyhow::Result<()> {
     let encoded = serde_json::to_string(response)?;
     let len = (encoded.len() as u32).to_be_bytes();
-    let mut socket_locked = socket.lock().await;
-    socket_locked.write_all(&len).await?;
-    socket_locked.write_all(encoded.as_bytes()).await?;
+    timeout(std::time::Duration::from_secs(5), async {
+        let mut socket_locked = socket.lock().await;
+        socket_locked.write_all(&len).await?;
+        socket_locked.write_all(encoded.as_bytes()).await?;
+        Ok::<(), std::io::Error>(())
+    })
+    .await
+    .map_err(|_| anyhow::anyhow!("timed out writing response to client"))??;
     Ok(())
 }
 

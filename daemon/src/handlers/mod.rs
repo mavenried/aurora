@@ -1,6 +1,5 @@
 use anyhow::Ok;
 use aurora_protocol::{Request, Response, Song};
-use std::time::Duration;
 use tokio::{io::AsyncReadExt, net::unix::OwnedReadHalf};
 
 use crate::{
@@ -22,7 +21,7 @@ mod remove_song_at;
 mod replace_queue;
 mod search;
 mod seek;
-mod settings;
+pub mod settings;
 mod status;
 
 async fn read_request(read: &mut OwnedReadHalf) -> anyhow::Result<Request> {
@@ -59,7 +58,7 @@ pub async fn handle_client(
             let _ = settings::get_last_played(&writer, &state).await;
             let _ = liked::get_liked_songs(&writer, &state).await;
             loop {
-                std::thread::sleep(Duration::from_millis(200));
+                tokio::time::sleep(std::time::Duration::from_millis(200)).await;
                 if status(&writer, &state).await.is_err() {
                     tracing::error!("Status notifier failed for a client");
                     break;

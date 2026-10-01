@@ -76,6 +76,12 @@ impl StateStruct {
                     tracing::error!("Failed to save play history: {e}");
                 }
             });
+
+            if let Some(state) = self.self_handle.upgrade() {
+                tokio::spawn(async move {
+                    let _ = crate::handlers::settings::broadcast_last_played(&state).await;
+                });
+            }
         }
     }
 

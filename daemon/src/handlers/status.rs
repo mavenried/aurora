@@ -12,6 +12,8 @@ pub async fn status(stream: &WriteSocket, state: &State) -> anyhow::Result<()> {
         let id = state.current_song.clone().unwrap().id;
         state.get_art(id);
     }
-    send_to_client(stream, &Response::Status(state.to_status())).await?;
+    let response = Response::Status(state.to_status());
+    drop(state);
+    send_to_client(stream, &response).await?;
     Ok(())
 }

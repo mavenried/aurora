@@ -1,7 +1,6 @@
 use uuid::Uuid;
 
 use crate::{
-    handlers::settings,
     helpers::{send_to_all, send_to_client},
     types::*,
 };
@@ -39,8 +38,5 @@ pub async fn enqueue(stream: &WriteSocket, state: &State, song_uuid: Uuid) -> an
     drop(state_locked);
 
     send_to_all(state, &resp).await?;
-    if should_start {
-        let _ = settings::broadcast_last_played(state).await;
-    }
     Ok(())
 }

@@ -1,5 +1,4 @@
 use crate::{
-    handlers::settings,
     helpers::{send_to_all, send_to_client},
     types::*,
 };
@@ -11,12 +10,11 @@ pub async fn next(stream: &WriteSocket, state: &State, n: usize) -> anyhow::Resu
     state_locked.add().await;
     let message = format!("Next {n} song(s).");
     tracing::info!("{message}");
-    send_to_client(stream, &Response::Status(state_locked.to_status())).await?;
-
+    let status = Response::Status(state_locked.to_status());
     let queue = state_locked.queue.iter().map(Song::from).collect();
     drop(state_locked);
+    send_to_client(stream, &status).await?;
     let _ = send_to_all(state, &Response::Queue(queue)).await;
-    let _ = settings::broadcast_last_played(state).await;
 
     Ok(())
 }
@@ -27,11 +25,10 @@ pub async fn prev(stream: &WriteSocket, state: &State, n: usize) -> anyhow::Resu
     state_locked.add().await;
     let message = format!("Prev {n} song(s).");
     tracing::info!("{message}");
-    send_to_client(stream, &Response::Status(state_locked.to_status())).await?;
-
+    let status = Response::Status(state_locked.to_status());
     let queue = state_locked.queue.iter().map(Song::from).collect();
     drop(state_locked);
+    send_to_client(stream, &status).await?;
     let _ = send_to_all(state, &Response::Queue(queue)).await;
-    let _ = settings::broadcast_last_played(state).await;
     Ok(())
 }
