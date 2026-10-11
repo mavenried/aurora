@@ -133,7 +133,7 @@ fn wire_settings(shared: &Shared) {
     });
 }
 
-fn now_playing_page() -> (gtk::Box, gtk::Picture, gtk::Label, gtk::Label, gtk::Scale, gtk::Button) {
+fn now_playing_page() -> (gtk::Box, gtk::Picture, gtk::Label, gtk::Label, gtk::Button) {
     let page = gtk::Box::new(gtk::Orientation::Vertical, 0);
     page.add_css_class("app-surface");
     page.set_margin_start(32);
@@ -176,12 +176,7 @@ fn now_playing_page() -> (gtk::Box, gtk::Picture, gtk::Label, gtk::Label, gtk::S
     artist.set_halign(gtk::Align::Center);
     page.append(&artist);
 
-    let seek = gtk::Scale::with_range(gtk::Orientation::Horizontal, 0.0, 1.0, 1.0);
-    seek.set_draw_value(false);
-    seek.set_hexpand(true);
-    seek.set_margin_top(24);
-    page.append(&seek);
-    (page, art, title, artist, seek, back)
+    (page, art, title, artist, back)
 }
 
 /// Removes all children of a `gtk::Box` before repopulating it with rebuilt content.
@@ -333,7 +328,7 @@ pub fn build_root(app: &adw::Application) -> Shared {
 
     let settings = settings_page();
     let settings_page = settings.page.clone();
-    let (now_playing_page, expanded_art, expanded_title_lbl, expanded_artist_lbl, expanded_seek_scale, now_playing_back) =
+    let (now_playing_page, expanded_art, expanded_title_lbl, expanded_artist_lbl, now_playing_back) =
         now_playing_page();
 
     // ---- Content stack + navigation split view ----
@@ -424,7 +419,6 @@ pub fn build_root(app: &adw::Application) -> Shared {
         expanded_art,
         expanded_title_lbl,
         expanded_artist_lbl,
-        expanded_seek_scale,
         player_art: player_built.art.clone(),
         player_title_lbl: player_built.title_lbl.clone(),
         player_artist_lbl: player_built.artist_lbl.clone(),
@@ -463,14 +457,6 @@ pub fn build_root(app: &adw::Application) -> Shared {
         now_playing_back.connect_clicked(move |_| {
             let target = shared_c.borrow().nav.clone();
             set_nav(&shared_c, target);
-        });
-    }
-    {
-        let shared_c = shared.clone();
-        let expanded_seek = shared.borrow().widgets.expanded_seek_scale.clone();
-        expanded_seek.connect_change_value(move |_, _, value| {
-            send(&shared_c, Request::Seek(std::time::Duration::from_millis(value.max(0.0) as u64)));
-            gtk::glib::Propagation::Proceed
         });
     }
 

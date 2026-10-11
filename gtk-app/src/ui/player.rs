@@ -302,7 +302,6 @@ pub fn update(shared: &Shared) {
     let expanded_art = w.expanded_art.clone();
     let expanded_title_lbl = w.expanded_title_lbl.clone();
     let expanded_artist_lbl = w.expanded_artist_lbl.clone();
-    let expanded_seek_scale = w.expanded_seek_scale.clone();
     let elapsed_lbl = w.elapsed_lbl.clone();
     let duration_lbl = w.duration_lbl.clone();
     let seek_scale = w.seek_scale.clone();
@@ -345,10 +344,8 @@ pub fn update(shared: &Shared) {
     elapsed_lbl.set_text(&format_duration(std::time::Duration::from_millis(position_ms as u64)));
     duration_lbl.set_text(&format_duration(std::time::Duration::from_millis(duration_ms as u64)));
     seek_scale.set_range(0.0, duration_ms);
-    expanded_seek_scale.set_range(0.0, duration_ms);
     if seek_override_ms.is_none() {
         seek_scale.set_value(position_ms);
-        expanded_seek_scale.set_value(position_ms);
     }
     seek_scale.set_sensitive(has_song);
     volume_scale.set_value(volume);

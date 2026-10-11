@@ -53,7 +53,6 @@ pub struct Widgets {
     pub expanded_art: gtk::Picture,
     pub expanded_title_lbl: gtk::Label,
     pub expanded_artist_lbl: gtk::Label,
-    pub expanded_seek_scale: gtk::Scale,
 
     pub player_art: gtk::Picture,
     pub player_title_lbl: gtk::Label,
