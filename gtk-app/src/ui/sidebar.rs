@@ -227,15 +227,17 @@ pub fn prompt(shared: &Shared, parent: &impl IsA<gtk::Widget>, title: &str, init
     button_row.append(&confirm_btn);
 
     let content = gtk::Box::new(gtk::Orientation::Vertical, 12);
-    content.set_margin_top(16);
-    content.set_margin_bottom(16);
-    content.set_margin_start(16);
-    content.set_margin_end(16);
+    /* spacing handled by popover CSS padding to avoid nested rounded surfaces */
+    content.set_margin_top(0);
+    content.set_margin_bottom(0);
+    content.set_margin_start(0);
+    content.set_margin_end(0);
     content.append(&title_lbl);
     content.append(&entry);
     content.append(&button_row);
 
     let popover = gtk::Popover::new();
+    popover.add_css_class("playlist-dialog");
     popover.set_child(Some(&content));
     popover.set_parent(parent);
     popover.connect_closed(|p| p.unparent());

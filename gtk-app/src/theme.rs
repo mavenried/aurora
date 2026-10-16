@@ -219,6 +219,22 @@ popover.menu contents {{ background-color: {bgd2}; border: 1px solid {bgd4}; bor
 popover.menu modelbutton {{ color: {txt1}; padding: 8px 12px; }}
 popover.menu modelbutton:hover {{ background-color: {bgd3}; }}
 
+popover.playlist-dialog {{
+ /* outer shell is transparent so the styled contents panel renders as a single surface */
+ background-color: transparent;
+ color: {txt1};
+ border-radius: 0;
+}}
+
+/* The actual dialog surface lives in the contents node so it can receive padding */
+popover.playlist-dialog contents {{
+ background-color: {bgd1};
+ color: {txt1};
+ border: 1px solid {bgd4};
+ border-radius: 16px;
+ padding: 16px;
+}}
+
 .disconnected-scrim {{ background-color: alpha(black, 0.8); }}
 .disconnected-card {{ background-color: {bgd1}; border-radius: 16px; }}
 "#,
