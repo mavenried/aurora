@@ -35,12 +35,19 @@ pub async fn send_to_all(state: &State, response: &Response) -> anyhow::Result<(
     Ok(())
 }
 
-pub async fn extract_art(id: Uuid, audio_path: std::path::PathBuf, db: db::Db) -> Option<std::path::PathBuf> {
+pub async fn extract_art(
+    id: Uuid,
+    audio_path: std::path::PathBuf,
+    db: db::Db,
+) -> Option<std::path::PathBuf> {
     extract_art_sized(id, audio_path, Some(db), 100, "jpg").await
 }
 
-pub async fn extract_highres_art(id: Uuid, audio_path: std::path::PathBuf) -> Option<std::path::PathBuf> {
-    extract_art_sized(id, audio_path, None, 0, "png").await
+pub async fn extract_highres_art(
+    id: Uuid,
+    audio_path: std::path::PathBuf,
+) -> Option<std::path::PathBuf> {
+    extract_art_sized(id, audio_path, None, 1000, "png").await
 }
 
 async fn extract_art_sized(
@@ -58,10 +65,10 @@ async fn extract_art_sized(
         let outdir = dirs::cache_dir()
             .unwrap_or_else(|| std::path::PathBuf::from("/tmp/"))
             .join("aurora-player");
-        let cache_file = if size == 0 {
+        let cache_file = if db.is_none() {
             outdir.join(format!("{id}-highres.{extension}"))
         } else {
-            outdir.join(format!("{id}-{size}.{extension}"))
+            outdir.join(format!("{id}-lowres.{extension}"))
         };
 
         if std::fs::exists(&cache_file).unwrap_or(false) {
@@ -80,8 +87,8 @@ async fn extract_art_sized(
             .decode()
             .ok()?
             .into_rgb8();
-        let resized = if size == 0 {
-            image
+        let resized = if db.is_none() {
+            image::imageops::thumbnail(&image, size, size)
         } else {
             image::imageops::resize(&image, size, size, FilterType::Lanczos3)
         };
@@ -89,7 +96,11 @@ async fn extract_art_sized(
         std::fs::create_dir_all(&outdir).ok()?;
 
         let file = std::fs::File::create(&cache_file).ok()?;
-        let format = if size == 0 { ImageFormat::Png } else { ImageFormat::Jpeg };
+        let format = if db.is_none() {
+            ImageFormat::Png
+        } else {
+            ImageFormat::Jpeg
+        };
         resized
             .write_to(&mut std::io::BufWriter::new(file), format)
             .ok()?;
