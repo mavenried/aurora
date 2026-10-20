@@ -219,6 +219,18 @@ popover.menu contents {{ background-color: {bgd2}; border: 1px solid {bgd4}; bor
 popover.menu modelbutton {{ color: {txt1}; padding: 8px 12px; }}
 popover.menu modelbutton:hover {{ background-color: {bgd3}; }}
 
+popover.context-menu {{ background-color: transparent; color: {txt1}; }}
+popover.context-menu contents {{
+ background-color: {bgd2}; color: {txt1};
+ border: 1px solid {bgd4}; border-radius: 8px; padding: 4px;
+}}
+popover.context-menu button {{
+ background: transparent; color: {txt1}; border: none; box-shadow: none;
+ border-radius: 6px; padding: 7px 10px; min-height: 0;
+}}
+popover.context-menu button:hover {{ background-color: {bgd3}; }}
+popover.context-menu button label {{ color: {txt1}; }}
+
 popover.playlist-dialog {{
  /* outer shell is transparent so the styled contents panel renders as a single surface */
  background-color: transparent;

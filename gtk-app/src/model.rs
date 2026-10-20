@@ -36,6 +36,7 @@ pub struct State {
     pub playlist_list_results: Vec<PlaylistMinimal>,
     pub playlist_result: Option<Playlist>,
     pub selected_song_ids: HashSet<Uuid>,
+    pub selection_anchor: Option<Uuid>,
     pub liked_song_ids: HashSet<Uuid>,
     pub liked_songs: Vec<Song>,
     pub last_played: Vec<Song>,

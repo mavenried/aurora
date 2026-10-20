@@ -440,6 +440,18 @@ pub fn build_root(app: &adw::Application) -> Shared {
     player::wire(&shared, &player_built);
     wire_settings(&shared);
     {
+        let keys = gtk::EventControllerKey::new();
+        let shared_c = shared.clone();
+        keys.connect_key_pressed(move |_, key, _, _| {
+            if key == gdk::Key::Escape && song_list::clear_selection(&shared_c) {
+                gtk::glib::Propagation::Stop
+            } else {
+                gtk::glib::Propagation::Proceed
+            }
+        });
+        window.add_controller(keys);
+    }
+    {
         let stack = content_stack.clone();
         let click = gtk::GestureClick::new();
         click.set_button(1);

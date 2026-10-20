@@ -6,7 +6,7 @@ use crate::app::{send, Shared};
 use crate::model::format_duration;
 use crate::ui::{clear, context_menu, icon};
 
-pub fn song_row(shared: &Shared, song: &Song, current_playlist: Option<Uuid>) -> gtk::Widget {
+pub fn song_row(shared: &Shared, song: &Song, current_playlist: Option<Uuid>, visible_ids: &[Uuid]) -> gtk::Widget {
     let (selected, liked, is_current, art) = {
         let mut s = shared.borrow_mut();
         let selected = s.state.is_selected(&song.id);
@@ -97,6 +97,7 @@ pub fn song_row(shared: &Shared, song: &Song, current_playlist: Option<Uuid>) ->
 
     let row = gtk::Box::new(gtk::Orientation::Horizontal, 0);
     row.add_css_class("song-row");
+    row.set_widget_name(&format!("song-row-{}", song.id));
     row.set_margin_start(6);
     row.set_margin_end(6);
     row.set_hexpand(false);
@@ -112,20 +113,48 @@ pub fn song_row(shared: &Shared, song: &Song, current_playlist: Option<Uuid>) ->
     {
         let shared = shared.clone();
         let song_id = song.id;
+        let visible_ids = visible_ids.to_vec();
         click.connect_pressed(move |gesture, _, _, _| {
-            let ctrl = gesture
+            let modifiers = gesture
                 .current_event()
                 .map(|e| e.modifier_state().contains(gtk::gdk::ModifierType::CONTROL_MASK))
                 .unwrap_or(false);
-            if ctrl {
+            let shift = gesture
+                .current_event()
+                .map(|e| e.modifier_state().contains(gtk::gdk::ModifierType::SHIFT_MASK))
+                .unwrap_or(false);
+            let ctrl = modifiers;
+            let mut selection_changed = false;
+            if shift {
+                let mut s = shared.borrow_mut();
+                let anchor = s
+                    .state
+                    .selection_anchor
+                    .filter(|anchor| visible_ids.contains(anchor))
+                    .unwrap_or(song_id);
+                let Some(anchor_idx) = visible_ids.iter().position(|id| *id == anchor) else { return };
+                let Some(clicked_idx) = visible_ids.iter().position(|id| *id == song_id) else { return };
+                if !ctrl {
+                    s.state.selected_song_ids.clear();
+                }
+                for id in &visible_ids[anchor_idx.min(clicked_idx)..=anchor_idx.max(clicked_idx)] {
+                    s.state.selected_song_ids.insert(*id);
+                }
+                s.state.selection_anchor = Some(anchor);
+                selection_changed = true;
+            } else if ctrl {
                 let mut s = shared.borrow_mut();
                 if !s.state.selected_song_ids.remove(&song_id) {
                     s.state.selected_song_ids.insert(song_id);
                 }
-                drop(s);
-                super::search::rebuild_results(&shared);
-                super::detail::rebuild(&shared);
+                s.state.selection_anchor = Some(song_id);
+                selection_changed = true;
             } else {
+                shared.borrow_mut().state.selection_anchor = Some(song_id);
+            }
+            if selection_changed {
+                update_selection_styles(&shared);
+            } else if !shift && !ctrl {
                 send(&shared, aurora_protocol::Request::Play(song_id));
             }
         });
@@ -149,6 +178,68 @@ pub fn song_row(shared: &Shared, song: &Song, current_playlist: Option<Uuid>) ->
     row.upcast()
 }
 
+fn update_selection_styles(shared: &Shared) {
+    let (search, detail, selected, current) = {
+        let s = shared.borrow();
+        (
+            s.widgets.search_results_box.clone(),
+            s.widgets.detail_list_box.clone(),
+            s.state.selected_song_ids.clone(),
+            s.state.current_song.as_ref().map(|song| song.id),
+        )
+    };
+
+    for container in [&search, &detail] {
+        let mut child = container.first_child();
+        while let Some(row) = child {
+            child = row.next_sibling();
+            let Some(id) = row
+                .widget_name()
+                .strip_prefix("song-row-")
+                .and_then(|id| Uuid::parse_str(id).ok())
+            else {
+                continue;
+            };
+
+            let is_selected = selected.contains(&id);
+            if is_selected {
+                row.add_css_class("selected");
+            } else {
+                row.remove_css_class("selected");
+            }
+
+            if let Some(content) = row.first_child() {
+                if let Some(accent_bar) = content.first_child() {
+                    accent_bar.remove_css_class("selected");
+                    accent_bar.remove_css_class("playing");
+                    if is_selected {
+                        accent_bar.add_css_class("selected");
+                    } else if current == Some(id) {
+                        accent_bar.add_css_class("playing");
+                    }
+                }
+            }
+        }
+    }
+}
+
+pub fn clear_selection(shared: &Shared) -> bool {
+    let had_selection = {
+        let mut s = shared.borrow_mut();
+        if s.state.selected_song_ids.is_empty() {
+            false
+        } else {
+            s.state.selected_song_ids.clear();
+            s.state.selection_anchor = None;
+            true
+        }
+    };
+    if had_selection {
+        update_selection_styles(shared);
+    }
+    had_selection
+}
+
 pub fn populate_song_list(shared: &Shared, container: &gtk::Box, songs: &[Song], current_playlist: Option<Uuid>) {
     clear(container);
     container.set_valign(gtk::Align::Start);
@@ -156,8 +247,9 @@ pub fn populate_song_list(shared: &Shared, container: &gtk::Box, songs: &[Song],
         container.append(&empty_state("audio-x-generic-symbolic", "No songs here", ""));
         return;
     }
+    let visible_ids: Vec<Uuid> = songs.iter().map(|song| song.id).collect();
     for song in songs {
-        container.append(&song_row(shared, song, current_playlist));
+        container.append(&song_row(shared, song, current_playlist, &visible_ids));
     }
 }
 

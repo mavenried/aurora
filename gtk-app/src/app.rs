@@ -202,6 +202,18 @@ pub fn send_many(shared: &Shared, reqs: Vec<Request>) {
     }
 }
 
+pub fn refresh_playlists(shared: &Shared, affected_playlist: Option<uuid::Uuid>) {
+    let active_playlist = match (&shared.borrow().nav, affected_playlist) {
+        (NavTarget::Playlist(active), Some(affected)) if *active == affected => Some(*active),
+        _ => None,
+    };
+    let mut reqs = vec![Request::PlaylistList];
+    if let Some(id) = active_playlist {
+        reqs.push(Request::PlaylistGet(id));
+    }
+    send_many(shared, reqs);
+}
+
 pub fn handle_daemon_event(shared: &Shared, event: DaemonEvent) {
     match event {
         DaemonEvent::Connected => {

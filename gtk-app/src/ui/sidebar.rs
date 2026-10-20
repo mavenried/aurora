@@ -2,7 +2,7 @@ use aurora_protocol::Request;
 use gtk::prelude::*;
 use uuid::Uuid;
 
-use crate::app::{send, Shared};
+use crate::app::{refresh_playlists, send, Shared};
 use crate::model::NavTarget;
 use crate::ui::{context_menu, icon};
 
@@ -101,6 +101,7 @@ pub fn wire(shared: &Shared, built: &Built) {
         prompt(&shared_c, &add_btn, "New Playlist", "", move |shared, name| {
             if !name.is_empty() {
                 send(shared, Request::PlaylistCreate(aurora_protocol::PlaylistIn { title: name, songs: vec![] }));
+                refresh_playlists(shared, None);
             }
         });
     });
@@ -137,6 +138,7 @@ fn plain_row(icon_name: &str, label_text: &str) -> gtk::Box {
 
 fn wire_row(shared: &Shared, row: &gtk::Box, target: NavTarget) {
     let click = gtk::GestureClick::new();
+    click.set_button(1);
     let shared = shared.clone();
     let row_weak = row.downgrade();
     click.connect_pressed(move |_, _, _, _| {
