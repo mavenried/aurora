@@ -58,14 +58,20 @@ pub async fn init(state: State) {
         if pending && last_event.elapsed() >= debounce {
             pending = false;
             tracing::info!("File watcher: rescanning music directory…");
+            let scan_started = Instant::now();
             let db = state.lock().await.db.clone();
             match helpers::build_index(&music_dir, &db).await {
                 Ok(new_index) => {
+                    let song_count = new_index.len();
                     state.lock().await.index = new_index;
-                    tracing::info!("File watcher: index updated.");
+                    tracing::info!(
+                        songs = song_count,
+                        elapsed_ms = scan_started.elapsed().as_millis(),
+                        "File watcher: index updated"
+                    );
                 }
                 Err(e) => {
-                    tracing::error!("File watcher: rescan error: {e}");
+                    tracing::error!(elapsed_ms = scan_started.elapsed().as_millis(), error = %e, "File watcher: rescan failed");
                 }
             }
         }

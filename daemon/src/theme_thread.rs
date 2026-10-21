@@ -2,9 +2,28 @@ use crate::{helpers::send_to_all, types::*};
 use anyhow::anyhow;
 use aurora_protocol::Theme;
 use notify::{EventKind, RecursiveMode, Watcher};
+use tokio::sync::mpsc;
 
 pub fn get_config() -> Theme {
-    let default = Theme {
+    let default = default_config();
+    if let Some(mut path) = dirs::config_dir()
+        && path.join("aurora-player/config.toml").exists()
+    {
+        path = path.join("aurora-player/config.toml");
+        match std::fs::read_to_string(path) {
+            Ok(contents) => parse_config(&contents),
+            Err(err) => {
+                tracing::warn!("Could not read theme config: {err}");
+                default
+            }
+        }
+    } else {
+        default
+    }
+}
+
+fn default_config() -> Theme {
+    Theme {
         bgd0: "#111111".into(),
         bgd1: "#282828".into(),
         bgd2: "#3c3836".into(),
@@ -16,19 +35,17 @@ pub fn get_config() -> Theme {
         srch: "#3c3836".into(),
         btns: "#ebdbb2".into(),
         follow_art_colorway: false,
-    };
-    if let Some(mut path) = dirs::config_dir()
-        && path.join("aurora-player/config.toml").exists()
-    {
-        path = path.join("aurora-player/config.toml");
-        let s = std::fs::read_to_string(path).unwrap();
-        let parsed: Theme = toml::from_str(&s).unwrap_or(default);
-        println!("{parsed:?}");
-        parsed
-    } else {
-        default
     }
+}
 
+fn parse_config(contents: &str) -> Theme {
+    match toml::from_str(contents) {
+        Ok(theme) => theme,
+        Err(err) => {
+            tracing::warn!("Could not parse theme config: {err}");
+            default_config()
+        }
+    }
 }
 
 pub fn save_config(theme: &Theme) -> anyhow::Result<()> {
@@ -46,10 +63,13 @@ pub async fn init(state: State) -> anyhow::Result<()> {
         return Err(anyhow!("could not load config dir"));
     };
     path = path.join("aurora-player");
-    let (tx, rx) = std::sync::mpsc::channel();
-    let mut watcher = notify::recommended_watcher(tx)?;
+    std::fs::create_dir_all(&path)?;
+    let (tx, mut rx) = mpsc::unbounded_channel();
+    let mut watcher = notify::recommended_watcher(move |event| {
+        let _ = tx.send(event);
+    })?;
     watcher.watch(&path, RecursiveMode::Recursive)?;
-    for event in rx {
+    while let Some(event) = rx.recv().await {
         if let Ok(event) = event {
             match event.kind {
                 EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_) => {
@@ -63,4 +83,37 @@ pub async fn init(state: State) -> anyhow::Result<()> {
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn invalid_theme_config_falls_back_to_defaults() {
+        let theme = parse_config("this is not valid TOML =");
+        assert_eq!(theme.bgd0, "#111111");
+        assert!(!theme.follow_art_colorway);
+    }
+
+    #[test]
+    fn theme_config_reads_optional_follow_art_setting() {
+        let theme = parse_config(
+            r##"
+bgd0 = "#000000"
+bgd1 = "#111111"
+bgd2 = "#222222"
+bgd3 = "#333333"
+bgd4 = "#444444"
+txt1 = "#ffffff"
+txt2 = "#eeeeee"
+acct = "#ff0000"
+srch = "#555555"
+btns = "#ffffff"
+follow_art_colorway = true
+"##,
+        );
+        assert_eq!(theme.bgd0, "#000000");
+        assert!(theme.follow_art_colorway);
+    }
 }
