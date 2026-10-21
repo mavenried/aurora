@@ -17,18 +17,39 @@ pub enum PlayerCommand {
     SetVolume(f64),
 }
 
+fn command_name(command: &PlayerCommand) -> &'static str {
+    match command {
+        PlayerCommand::PlayPause => "PlayPause",
+        PlayerCommand::Play => "Play",
+        PlayerCommand::Pause => "Pause",
+        PlayerCommand::Stop => "Stop",
+        PlayerCommand::Next => "Next",
+        PlayerCommand::Prev => "Prev",
+        PlayerCommand::SeekOffset(_) => "SeekOffset",
+        PlayerCommand::SeekAbsolute(_) => "SeekAbsolute",
+        PlayerCommand::SetVolume(_) => "SetVolume",
+    }
+}
+
 pub async fn init(state: State) -> anyhow::Result<()> {
     let (tx, mut rx) = mpsc::unbounded_channel::<PlayerCommand>();
 
     let state_for_ctrl = state.clone();
     std::thread::spawn(move || {
-        let rt = tokio::runtime::Runtime::new().unwrap();
-        rt.block_on(async {
-            controller(tx, state_for_ctrl).await.ok();
-        });
+        let rt = match tokio::runtime::Runtime::new() {
+            Ok(rt) => rt,
+            Err(err) => {
+                tracing::error!("Could not start MPRIS runtime: {err}");
+                return;
+            }
+        };
+        if let Err(err) = rt.block_on(controller(tx, state_for_ctrl)) {
+            tracing::error!("MPRIS controller stopped: {err}");
+        }
     });
 
     while let Some(cmd) = rx.recv().await {
+        tracing::debug!(command = command_name(&cmd), "Received MPRIS command");
         match cmd {
             PlayerCommand::PlayPause => {
                 state.lock().await.pause().await;
@@ -106,6 +127,7 @@ pub async fn controller(
         .can_seek(true)
         .build()
         .await?;
+    tracing::info!("MPRIS player registered on the session bus");
 
     let tx = cmd_tx.clone();
     player.connect_play_pause(move |_| {
@@ -245,8 +267,8 @@ pub async fn controller(
     };
 
     tokio::select! {
-        _ = run_task => {},
-        _ = sync_task => {},
+        _ = run_task => tracing::warn!("MPRIS D-Bus server stopped."),
+        _ = sync_task => tracing::warn!("MPRIS state synchronization stopped."),
     }
 
     Ok(())
