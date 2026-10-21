@@ -10,28 +10,115 @@ pub use index::*;
 pub use liked_store::*;
 pub use playlist::*;
 
+use futures::future::join_all;
+use std::sync::Arc;
+use std::time::Instant;
 use tokio::{io::AsyncWriteExt, time::timeout};
 use uuid::Uuid;
+
+fn response_name(response: &Response) -> &'static str {
+    match response {
+        Response::Error { .. } => "Error",
+        Response::Status(_) => "Status",
+        Response::SearchResults(_) => "SearchResults",
+        Response::PlaylistResults(_) => "PlaylistResults",
+        Response::PlaylistList(_) => "PlaylistList",
+        Response::Queue(_) => "Queue",
+        Response::Theme(_) => "Theme",
+        Response::Volume(_) => "Volume",
+        Response::ArtistList(_) => "ArtistList",
+        Response::LastPlayed(_) => "LastPlayed",
+        Response::LikedSongs(_) => "LikedSongs",
+        Response::ArtReady { .. } => "ArtReady",
+        Response::HighResArtReady { .. } => "HighResArtReady",
+    }
+}
 
 pub async fn send_to_client(socket: &WriteSocket, response: &Response) -> anyhow::Result<()> {
     let encoded = serde_json::to_string(response)?;
     let len = (encoded.len() as u32).to_be_bytes();
-    timeout(std::time::Duration::from_secs(5), async {
+    let response_type = response_name(response);
+    let client_id = Arc::as_ptr(socket) as usize;
+    let started = Instant::now();
+    tracing::debug!(
+        client_id,
+        response = response_type,
+        bytes = encoded.len(),
+        "Writing response frame"
+    );
+    match timeout(std::time::Duration::from_secs(5), async {
         let mut socket_locked = socket.lock().await;
         socket_locked.write_all(&len).await?;
         socket_locked.write_all(encoded.as_bytes()).await?;
         Ok::<(), std::io::Error>(())
     })
     .await
-    .map_err(|_| anyhow::anyhow!("timed out writing response to client"))??;
-    Ok(())
+    {
+        Ok(Ok(())) => {
+            tracing::debug!(
+                response = response_type,
+                client_id,
+                bytes = encoded.len(),
+                elapsed_ms = started.elapsed().as_millis(),
+                "Response frame sent"
+            );
+            Ok(())
+        }
+        Ok(Err(err)) => {
+            tracing::warn!(client_id, response = response_type, error = %err, "Socket write failed");
+            Err(err.into())
+        }
+        Err(_) => {
+            tracing::warn!(
+                response = response_type,
+                client_id,
+                bytes = encoded.len(),
+                elapsed_ms = started.elapsed().as_millis(),
+                "Timed out writing response frame"
+            );
+            Err(anyhow::anyhow!("timed out writing response to client"))
+        }
+    }
 }
 
 pub async fn send_to_all(state: &State, response: &Response) -> anyhow::Result<()> {
     let clients: Vec<_> = state.lock().await.clients.clone();
-    for client in &clients {
-        let _ = send_to_client(client, response).await;
+    let response_type = response_name(response);
+    tracing::debug!(
+        response = response_type,
+        clients = clients.len(),
+        "Broadcast started"
+    );
+    let results = join_all(
+        clients
+            .iter()
+            .map(|client| send_to_client(client, response)),
+    )
+    .await;
+    let failed: Vec<_> = clients
+        .iter()
+        .zip(results)
+        .filter_map(|(client, result)| result.is_err().then(|| client.clone()))
+        .collect();
+
+    if !failed.is_empty() {
+        tracing::warn!(
+            response = response_type,
+            failed_clients = failed.len(),
+            "Removing clients with failed broadcast writes"
+        );
+        state
+            .lock()
+            .await
+            .clients
+            .retain(|client| !failed.iter().any(|failed| Arc::ptr_eq(client, failed)));
     }
+    tracing::debug!(
+        response = response_type,
+        clients = clients.len(),
+        failed_clients = failed.len(),
+        "Broadcast completed"
+    );
     Ok(())
 }
 

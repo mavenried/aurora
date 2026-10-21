@@ -80,8 +80,8 @@ pub async fn playlist_create(
 }
 
 pub async fn playlist_list(stream: &WriteSocket, state: &State) -> anyhow::Result<()> {
-    let mut state = state.lock().await;
-    match state.get_all_playlists().await {
+    let result = state.lock().await.get_all_playlists().await;
+    match result {
         Ok(list) => {
             send_to_client(stream, &Response::PlaylistList(list)).await?;
         }
@@ -150,12 +150,18 @@ pub async fn playlist_add_songs(
 }
 
 pub async fn playlist_get(stream: &WriteSocket, state: &State, id: Uuid) -> anyhow::Result<()> {
-    let mut state = state.lock().await;
-    match state.get_playlist(id).await {
-        Ok(playlist) => {
+    let result = {
+        let mut state = state.lock().await;
+        let result = state.get_playlist(id).await;
+        if let Ok(playlist) = &result {
             for song in &playlist.songs {
                 state.get_art(song.id);
             }
+        }
+        result
+    };
+    match result {
+        Ok(playlist) => {
             send_to_client(stream, &Response::PlaylistResults(playlist)).await?;
         }
         Err(err) => {

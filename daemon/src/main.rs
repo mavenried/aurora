@@ -6,6 +6,7 @@ use std::{
     fs::{File, remove_file},
     path::PathBuf,
     sync::Arc,
+    time::{Duration, Instant},
     vec,
 };
 use tokio::{net::UnixListener, sync::Mutex};
@@ -24,14 +25,24 @@ use types::*;
 const PIDFILE: &str = "/tmp/aurora-daemon.pid";
 const SOCKFILE: &str = "/tmp/aurora-daemon.sock";
 const OUTFILE: &str = "/tmp/aurora-daemon.out";
+const IDLE_TIMEOUT: Duration = Duration::from_secs(5 * 60);
+
+fn is_inactive(clients_empty: bool, queue_empty: bool, paused: bool) -> bool {
+    clients_empty && (queue_empty || paused)
+}
 
 fn main() -> std::io::Result<()> {
-    tracing_subscriber::fmt::init();
+    let filter = tracing_subscriber::EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("aurora_daemon=debug,info"));
+    tracing_subscriber::fmt().with_env_filter(filter).init();
 
     if args().nth(1).is_none() {
+        let stdout = File::create(OUTFILE)?;
+        let stderr = stdout.try_clone()?;
         let daemonize = Daemonize::new()
             .pid_file(PIDFILE)
-            .stdout(File::create(OUTFILE).unwrap());
+            .stdout(stdout)
+            .stderr(stderr);
 
         daemonize.start().unwrap_or_else(|err| {
             tracing::error!("Error {err}");
@@ -49,6 +60,7 @@ fn main() -> std::io::Result<()> {
 }
 
 async fn async_main() -> std::io::Result<()> {
+    tracing::info!("Aurora daemon starting");
     std::thread::spawn(move || {
         let mut signals = Signals::new(TERM_SIGNALS).unwrap();
 
@@ -73,7 +85,13 @@ async fn async_main() -> std::io::Result<()> {
     let music_dir = dirs::home_dir()
         .unwrap_or_else(|| PathBuf::from("/root"))
         .join("Music");
+    let index_started = Instant::now();
     let index = helpers::build_index(&music_dir, &db).await?;
+    tracing::info!(
+        songs = index.len(),
+        elapsed_ms = index_started.elapsed().as_millis(),
+        "Initial music index ready"
+    );
     let recently_played = helpers::load_history(&db).await.unwrap_or_default();
     let liked_ids = helpers::load_liked(&db).await.unwrap_or_default();
 
@@ -97,37 +115,85 @@ async fn async_main() -> std::io::Result<()> {
     });
 
     let state_clone = state.clone();
-    tokio::spawn(async move { watcher_thread::init(state_clone).await });
+    tokio::spawn(async move {
+        tracing::info!("Playback watcher task starting");
+        watcher_thread::init(state_clone).await;
+    });
 
     let state_clone = state.clone();
     tokio::spawn(async move { file_watcher_thread::init(state_clone).await });
 
     let state_clone = state.clone();
-    tokio::spawn(async move { mpris_thread::init(state_clone).await });
+    tokio::spawn(async move {
+        if let Err(err) = mpris_thread::init(state_clone).await {
+            tracing::error!(error = %err, "MPRIS worker stopped");
+        }
+    });
 
     let state_clone = state.clone();
-    tokio::spawn(async move { theme_thread::init(state_clone).await });
+    tokio::spawn(async move {
+        if let Err(err) = theme_thread::init(state_clone).await {
+            tracing::error!(error = %err, "Theme watcher stopped");
+        }
+    });
+
+    let idle_state = state.clone();
+    tokio::spawn(async move {
+        let mut inactive_since = Instant::now();
+        loop {
+            tokio::time::sleep(Duration::from_secs(1)).await;
+
+            let inactive = {
+                let state = idle_state.lock().await;
+                is_inactive(
+                    state.clients.is_empty(),
+                    state.queue.is_empty(),
+                    state.is_paused(),
+                )
+            };
+            if inactive {
+                if inactive_since.elapsed() >= IDLE_TIMEOUT {
+                    tracing::info!(
+                        "No clients or active playback for five minutes; shutting down."
+                    );
+                    remove_file(SOCKFILE).ok();
+                    remove_file(PIDFILE).ok();
+                    std::process::exit(0);
+                }
+            } else {
+                inactive_since = Instant::now();
+            }
+        }
+    });
 
     let path = PathBuf::from(SOCKFILE);
     // A stale socket file from a prior ungraceful exit (crash, SIGKILL) would
     // otherwise make bind() fail forever, since nothing else ever unlinks it.
     let _ = std::fs::remove_file(&path);
-    let listener = UnixListener::bind(path).unwrap_or_else(|err| {
+    let listener = UnixListener::bind(&path).unwrap_or_else(|err| {
         tracing::error!("Error: {err}");
         std::process::exit(1)
     });
-    tracing::info!("{listener:?}");
+    tracing::info!(socket = %path.display(), "Daemon listening for client connections");
 
     loop {
-        let (socket, addr) = listener.accept().await?;
+        let (socket, addr) = match listener.accept().await {
+            Ok(accepted) => accepted,
+            Err(err) => {
+                tracing::error!(error = %err, "Accept failed; retrying");
+                tokio::time::sleep(Duration::from_millis(100)).await;
+                continue;
+            }
+        };
         let (reader, w) = socket.into_split();
         let writer = Arc::new(Mutex::new(w));
+        let client_id = Arc::as_ptr(&writer) as usize;
 
         {
             state.lock().await.clients.push(writer.clone());
         }
 
-        tracing::info!("New client: {:?}", addr);
+        tracing::info!(client_id, peer = ?addr, "Client connected");
         let state_clone = state.clone();
         tokio::spawn(async move {
             if let Err(e) =
@@ -144,6 +210,29 @@ async fn async_main() -> std::io::Result<()> {
             {
                 state_guard.clients.swap_remove(pos);
             }
+            tracing::info!(client_id, peer = ?addr, "Client disconnected and state cleaned up");
         });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::is_inactive;
+
+    #[test]
+    fn connected_clients_keep_daemon_active() {
+        assert!(!is_inactive(false, true, true));
+        assert!(!is_inactive(false, false, false));
+    }
+
+    #[test]
+    fn active_playback_keeps_disconnected_daemon_alive() {
+        assert!(!is_inactive(true, false, false));
+    }
+
+    #[test]
+    fn no_clients_and_no_playback_is_inactive() {
+        assert!(is_inactive(true, true, false));
+        assert!(is_inactive(true, false, true));
     }
 }

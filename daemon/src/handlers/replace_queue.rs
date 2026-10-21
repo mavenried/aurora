@@ -15,26 +15,28 @@ pub async fn replace_queue(
     let mut queue_out = vec![];
 
     for id in queue_in {
-        let songmeta = match state_locked.index.get(&id) {
-            Some(s) => s.clone(),
-            None => {
-                send_to_client(
-                    stream,
-                    &Response::Error {
-                        err_id: 1,
-                        err_msg: format!("No such song with id {}", id),
-                    },
-                )
-                .await?;
-                return Ok(());
-            }
+        let Some(songmeta) = state_locked.index.get(&id).cloned() else {
+            drop(state_locked);
+            send_to_client(
+                stream,
+                &Response::Error {
+                    err_id: 1,
+                    err_msg: format!("No such song with id {}", id),
+                },
+            )
+            .await?;
+            return Ok(());
         };
         queue_out.push(songmeta);
     }
 
     state_locked.queue = queue_out.into();
-    state_locked.current_song = Some(state_locked.queue[0].clone());
-    state_locked.add().await;
+    if let Some(song) = state_locked.queue.front().cloned() {
+        state_locked.current_song = Some(song);
+        state_locked.add().await;
+    } else {
+        state_locked.clear().await;
+    }
 
     let resp = Response::Queue(state_locked.queue.iter().map(Song::from).collect());
     drop(state_locked);

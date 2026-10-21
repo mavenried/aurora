@@ -9,19 +9,17 @@ use aurora_protocol::{Response, Song};
 pub async fn enqueue(stream: &WriteSocket, state: &State, song_uuid: Uuid) -> anyhow::Result<()> {
     let mut state_locked = state.lock().await;
 
-    let song = match state_locked.index.get(&song_uuid) {
-        Some(s) => s.clone(),
-        None => {
-            send_to_client(
-                stream,
-                &Response::Error {
-                    err_id: 1,
-                    err_msg: format!("No such song with id {song_uuid}"),
-                },
-            )
-            .await?;
-            return Ok(());
-        }
+    let Some(song) = state_locked.index.get(&song_uuid).cloned() else {
+        drop(state_locked);
+        send_to_client(
+            stream,
+            &Response::Error {
+                err_id: 1,
+                err_msg: format!("No such song with id {song_uuid}"),
+            },
+        )
+        .await?;
+        return Ok(());
     };
 
     let should_start = state_locked.queue.is_empty();

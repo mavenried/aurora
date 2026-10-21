@@ -14,19 +14,17 @@ pub async fn enqueue_at(
 ) -> anyhow::Result<()> {
     let mut state_locked = state.lock().await;
 
-    let song = match state_locked.index.get(&song_uuid) {
-        Some(s) => s.clone(),
-        None => {
-            send_to_client(
-                stream,
-                &Response::Error {
-                    err_id: 1,
-                    err_msg: format!("No such song with id {song_uuid}"),
-                },
-            )
-            .await?;
-            return Ok(());
-        }
+    let Some(song) = state_locked.index.get(&song_uuid).cloned() else {
+        drop(state_locked);
+        send_to_client(
+            stream,
+            &Response::Error {
+                err_id: 1,
+                err_msg: format!("No such song with id {song_uuid}"),
+            },
+        )
+        .await?;
+        return Ok(());
     };
 
     let was_empty = state_locked.queue.is_empty();

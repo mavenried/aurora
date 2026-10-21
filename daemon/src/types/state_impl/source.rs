@@ -1,8 +1,8 @@
 use rodio::{Sink, Source};
 use std::fs::File;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
+use std::sync::atomic::{AtomicBool, AtomicUsize};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use symphonia::core::audio::SampleBuffer;
@@ -46,6 +46,7 @@ pub struct SeekableAudio {
     sink: Arc<Sink>,
     buffer: Arc<Mutex<AudioBuffer>>,
     source: Option<BufferSource>,
+    cancelled: Arc<AtomicBool>,
 }
 
 impl SeekableAudio {
@@ -56,13 +57,13 @@ impl SeekableAudio {
             channels,
             duration,
         )));
+        let cancelled = Arc::new(AtomicBool::new(false));
 
         {
             let path = path.to_owned();
             let buffer_clone = buffer.clone();
-            std::thread::spawn(move || {
-                let _ = Self::decode_streaming(path, buffer_clone);
-            });
+            let cancelled_clone = cancelled.clone();
+            std::thread::spawn(move || decode_worker(path, buffer_clone, cancelled_clone));
         }
         let buf = BufferSource::new(buffer.clone(), 0);
         sink.append(buf.clone());
@@ -72,6 +73,7 @@ impl SeekableAudio {
             sink,
             buffer,
             source: Some(buf),
+            cancelled,
         })
     }
 
@@ -121,6 +123,7 @@ impl SeekableAudio {
     fn decode_streaming(
         path: PathBuf,
         buffer: Arc<Mutex<AudioBuffer>>,
+        cancelled: Arc<AtomicBool>,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let file = Box::new(File::open(&path)?);
         let mss = MediaSourceStream::new(file, Default::default());
@@ -151,6 +154,9 @@ impl SeekableAudio {
         let track_id = track.id;
 
         loop {
+            if cancelled.load(Ordering::Relaxed) {
+                break;
+            }
             let packet = match reader.next_packet() {
                 Ok(p) => p,
                 Err(Error::IoError(_)) => break,
@@ -204,6 +210,21 @@ impl SeekableAudio {
 
         if !was_paused {
             self.sink.play();
+        }
+    }
+}
+
+impl Drop for SeekableAudio {
+    fn drop(&mut self) {
+        self.cancelled.store(true, Ordering::Relaxed);
+    }
+}
+
+fn decode_worker(path: PathBuf, buffer: Arc<Mutex<AudioBuffer>>, cancelled: Arc<AtomicBool>) {
+    if let Err(err) = SeekableAudio::decode_streaming(path.clone(), buffer.clone(), cancelled) {
+        tracing::error!("Failed to decode audio file {path:?}: {err}");
+        if let Ok(mut buffer) = buffer.lock() {
+            buffer.fully_loaded = true;
         }
     }
 }
@@ -264,5 +285,43 @@ impl Source for BufferSource {
     }
     fn total_duration(&self) -> Option<Duration> {
         Some(self.buffer.lock().unwrap().duration)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn time_to_sample_index_accounts_for_rate_and_channels() {
+        let buffer = AudioBuffer::new(48_000, 2, Duration::from_secs(10));
+        assert_eq!(
+            buffer.sample_index_from_time(Duration::from_secs(1)),
+            96_000
+        );
+        assert_eq!(
+            buffer.sample_index_from_time(Duration::from_millis(500)),
+            48_000
+        );
+    }
+
+    #[test]
+    fn time_to_sample_index_starts_at_zero() {
+        let buffer = AudioBuffer::new(44_100, 1, Duration::from_secs(1));
+        assert_eq!(buffer.sample_index_from_time(Duration::ZERO), 0);
+    }
+
+    #[test]
+    fn decoder_failure_marks_audio_buffer_complete() {
+        let buffer = Arc::new(Mutex::new(AudioBuffer::new(
+            44_100,
+            2,
+            Duration::from_secs(1),
+        )));
+        let path = std::env::temp_dir().join(format!("missing-audio-{}", uuid::Uuid::new_v4()));
+
+        decode_worker(path, buffer.clone(), Arc::new(AtomicBool::new(false)));
+
+        assert!(buffer.lock().unwrap().fully_loaded);
     }
 }
