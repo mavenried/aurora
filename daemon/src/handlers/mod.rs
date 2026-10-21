@@ -37,9 +37,14 @@ async fn read_request_with_timeout(
 ) -> anyhow::Result<Request> {
     const MAX_REQUEST_SIZE: usize = 16 * 1024 * 1024;
 
+    // A client may keep this connection open indefinitely without sending a
+    // request. Wait for the first byte without a timeout, then bound the rest
+    // of the frame so a partially written request cannot hold a task forever.
+    let mut len_buf = [0u8; 4];
+    read.read_exact(&mut len_buf[..1]).await?;
+
     match timeout(read_timeout, async {
-        let mut len_buf = [0u8; 4];
-        read.read_exact(&mut len_buf).await?;
+        read.read_exact(&mut len_buf[1..]).await?;
         let msg_len = u32::from_be_bytes(len_buf) as usize;
         tracing::debug!(frame_bytes = msg_len, "Received request frame header");
         if msg_len > MAX_REQUEST_SIZE {
@@ -151,8 +156,23 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn times_out_when_a_client_sends_no_frame() {
+    async fn idle_connection_can_wait_indefinitely_for_a_request() {
         let (_client, mut reader) = tokio::io::duplex(128);
+
+        assert!(
+            timeout(
+                Duration::from_millis(10),
+                read_request_with_timeout(&mut reader, Duration::from_millis(50))
+            )
+            .await
+            .is_err()
+        );
+    }
+
+    #[tokio::test]
+    async fn times_out_when_a_client_stalls_mid_header() {
+        let (mut client, mut reader) = tokio::io::duplex(128);
+        client.write_all(&[0]).await.unwrap();
 
         let error = read_request_with_timeout(&mut reader, Duration::from_millis(10))
             .await
@@ -161,7 +181,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn times_out_when_a_client_stalls_mid_frame() {
+    async fn times_out_when_a_client_stalls_mid_payload() {
         let (mut client, mut reader) = tokio::io::duplex(128);
         client.write_all(&4_u32.to_be_bytes()).await.unwrap();
 
