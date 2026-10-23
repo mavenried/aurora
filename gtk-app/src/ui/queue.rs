@@ -28,7 +28,9 @@ pub fn rebuild(shared: &Shared) {
     }
 
     for (index, song) in display.iter().enumerate() {
-        container.append(&queue_row(shared, index, song));
+        // The daemon keeps the playing song at queue position 0; the UI
+        // omits it, so visible rows start at daemon position 1.
+        container.append(&queue_row(shared, index + 1, song));
     }
 }
 
@@ -63,12 +65,13 @@ fn queue_row(shared: &Shared, index: usize, song: &Song) -> gtk::Widget {
     let duration_lbl = gtk::Label::new(Some(&format_duration(song.duration)));
     duration_lbl.add_css_class("txt2");
     duration_lbl.add_css_class("subtle-13");
+    duration_lbl.set_margin_end(12);
 
     let row = gtk::Box::new(gtk::Orientation::Horizontal, 14);
     row.add_css_class("queue-row");
     row.set_size_request(-1, 68);
     row.set_margin_start(12);
-    row.set_margin_end(14);
+    row.set_margin_end(26);
     row.set_margin_top(3);
     row.set_margin_bottom(3);
     row.set_hexpand(false);
@@ -82,7 +85,7 @@ fn queue_row(shared: &Shared, index: usize, song: &Song) -> gtk::Widget {
     click.set_button(1);
     {
         let shared = shared.clone();
-        click.connect_pressed(move |_, _, _, _| send(&shared, Request::Next(index + 1)));
+        click.connect_pressed(move |_, _, _, _| send(&shared, Request::Next(index)));
     }
     row.add_controller(click);
 

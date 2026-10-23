@@ -25,6 +25,7 @@ pub struct Built {
     pub shuffle_btn: gtk::Button,
     pub repeat_btn: gtk::Button,
     pub like_btn: gtk::Button,
+    pub clear_queue_btn: gtk::Button,
 }
 
 fn circle_btn(icon_name: &str, diameter: i32, icon_px: i32) -> gtk::Button {
@@ -151,6 +152,8 @@ pub fn build() -> Built {
     let like_btn = circle_btn("emblem-favorite-symbolic", 34, 15);
     like_btn.add_css_class("toggle-btn");
     like_btn.add_css_class("like-btn");
+    let clear_queue_btn = circle_btn("edit-clear-all-symbolic", 34, 15);
+    clear_queue_btn.set_tooltip_text(Some("Clear queue"));
     let volume_icon = icon("audio-volume-high-symbolic");
     volume_icon.add_css_class("txt2");
     let volume_scale = gtk::Scale::with_range(gtk::Orientation::Horizontal, 0.0, 1.0, 0.01);
@@ -166,6 +169,7 @@ pub fn build() -> Built {
     right_cluster.set_valign(gtk::Align::Center);
     right_cluster.set_margin_end(16);
     right_cluster.append(&like_btn);
+    right_cluster.append(&clear_queue_btn);
     right_cluster.append(&volume_icon);
     right_cluster.append(&volume_scale);
 
@@ -188,6 +192,7 @@ pub fn build() -> Built {
         shuffle_btn,
         repeat_btn,
         like_btn,
+        clear_queue_btn,
     }
 }
 
@@ -230,6 +235,10 @@ pub fn wire(shared: &Shared, built: &Built) {
                 .collect();
             crate::app::send_many(&shared, reqs);
         });
+    }
+    {
+        let shared = shared.clone();
+        built.clear_queue_btn.connect_clicked(move |_| send(&shared, Request::Clear));
     }
     {
         // GtkScale's internal slider-drag gesture claims the pointer

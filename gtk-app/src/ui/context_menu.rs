@@ -182,8 +182,10 @@ pub fn show_queue_menu(shared: &Shared, parent: &impl IsA<gtk::Widget>, index: u
 
     let shared_c = shared.clone();
     menu.append(&action_button("Move to Front", &[popover.clone()], move || {
-        if index != 0 {
-            send(&shared_c, Request::MoveQueue { from: index, to: 0 });
+        // Position 0 is the currently playing song. Move to position 1,
+        // the front of the upcoming queue.
+        if index > 1 {
+            send(&shared_c, Request::MoveQueue { from: index, to: 1 });
         }
     }));
 

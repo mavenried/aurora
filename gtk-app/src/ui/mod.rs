@@ -26,11 +26,6 @@ pub fn icon_sized(name: &str, px: i32) -> gtk::Image {
 struct SettingsBuilt {
     page: gtk::Box,
     colorways: gtk::Switch,
-    theme: gtk::Switch,
-    compact_rows: gtk::Switch,
-    smooth_scrolling: gtk::Switch,
-    remember_volume: gtk::Switch,
-    show_album_art: gtk::Switch,
 }
 
 fn settings_page() -> SettingsBuilt {
@@ -86,11 +81,6 @@ fn settings_page() -> SettingsBuilt {
     SettingsBuilt {
         page,
         colorways: colorways.1,
-        theme: theme.1,
-        compact_rows: compact_rows.1,
-        smooth_scrolling: smooth_scrolling.1,
-        remember_volume: remember_volume.1,
-        show_album_art: show_album_art.1,
     }
 }
 
@@ -411,11 +401,6 @@ pub fn build_root(app: &adw::Application) -> Shared {
         queue_list_box,
         queue_scroller,
         settings_colorways: settings.colorways.clone(),
-        settings_theme: settings.theme.clone(),
-        settings_compact_rows: settings.compact_rows.clone(),
-        settings_smooth_scrolling: settings.smooth_scrolling.clone(),
-        settings_remember_volume: settings.remember_volume.clone(),
-        settings_show_album_art: settings.show_album_art.clone(),
         expanded_art,
         expanded_title_lbl,
         expanded_artist_lbl,
