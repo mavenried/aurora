@@ -1,6 +1,6 @@
 use crate::types::{GetReturn, SongIndex, WriteSocket};
 use aurora_protocol::{Response, Song, SongMeta, Status, Theme};
-use rodio::Sink;
+use rodio::Player;
 use std::collections::{HashSet, VecDeque};
 use std::sync::{Arc, Weak};
 use std::time::Duration;
@@ -13,7 +13,7 @@ pub struct StateStruct {
     pub current_song: Option<SongMeta>,
     pub queue: VecDeque<SongMeta>,
     pub index: SongIndex,
-    pub sink: Arc<Sink>,
+    pub sink: Arc<Player>,
     pub clients: Vec<WriteSocket>,
     pub audio: Option<source::SeekableAudio>,
     pub theme: Theme,
@@ -127,8 +127,8 @@ impl StateStruct {
                         song.art_path = Some(art_path.clone());
                     }
                 }
-                let _ = crate::helpers::send_to_all(&state, &Response::ArtReady { id, art_path })
-                    .await;
+                let _ =
+                    crate::helpers::send_to_all(&state, &Response::ArtReady { id, art_path }).await;
             }
         });
     }

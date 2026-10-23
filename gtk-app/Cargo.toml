@@ -8,9 +8,9 @@ adw = { version = "0.9.2", package = "libadwaita", default-features = false, fea
 anyhow = "1.0.104"
 async-channel = "2.5.0"
 aurora-protocol = { version = "0.1.0", path = "../protocol" }
-gtk = { version = "0.11.4", package = "gtk4", default-features = false, features = ["v4_12"] }
-serde_json = "1.0.151"
-tokio = { version = "1.53.1", features = ["full"] }
+gtk = { version = "0.11.5", package = "gtk4", default-features = false, features = ["v4_12"] }
+serde_json = "1.0.154"
+tokio = { version = "1.54.1", features = ["full"] }
 tracing = "0.1.44"
 tracing-subscriber = "0.3.23"
-uuid = { version = "1.24.0", features = ["v4", "serde"] }
+uuid = { version = "1.28.0", features = ["v4", "serde"] }

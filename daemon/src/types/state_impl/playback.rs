@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use rand::Rng;
+use rand::RngExt;
 use std::collections::VecDeque;
 
 use super::{GetReturn, StateStruct};
@@ -70,7 +70,7 @@ impl StateStruct {
             let song = self.queue.pop_front().unwrap();
             self.queue.push_back(song);
 
-            let idx = rand::thread_rng().gen_range(0..self.queue.len() - 1);
+            let idx = rand::rng().random_range(0..self.queue.len() - 1);
             self.queue.swap(0, idx);
             self.current_song.replace(self.queue[0].clone());
             tracing::info!("Next (shuffle)");

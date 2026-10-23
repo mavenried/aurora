@@ -11,8 +11,8 @@ homepage = "https://github.com/mavenried"
 repository = "https://github.com/mavenried/aurora"
 
 [dependencies]
-serde = { version = "1.0.219", features = ["derive"] }
-uuid = { version = "1.4.1", features = ["v4", "serde"] }
+serde = { version = "1.0.229", features = ["derive"] }
+uuid = { version = "1.28.0", features = ["v4", "serde"] }
 
 
 

@@ -7,7 +7,7 @@ use std::{
 
 use symphonia::{
     core::{
-        formats::FormatOptions, io::MediaSourceStream, meta::MetadataOptions, units::TimeStamp,
+        formats::FormatOptions, io::MediaSourceStream, meta::MetadataOptions, units::Timestamp,
     },
     default::get_probe,
 };
@@ -38,11 +38,11 @@ fn read_tags(path: &PathBuf) -> Option<(String, Vec<String>, Duration)> {
     };
 
     let mss = MediaSourceStream::new(Box::new(file), Default::default());
-    let mut probe = match get_probe().format(
+    let mut format = match get_probe().probe(
         &Default::default(),
         mss,
-        &FormatOptions::default(),
-        &MetadataOptions::default(),
+        FormatOptions::default(),
+        MetadataOptions::default(),
     ) {
         Ok(p) => p,
         Err(e) => {
@@ -51,8 +51,6 @@ fn read_tags(path: &PathBuf) -> Option<(String, Vec<String>, Duration)> {
         }
     };
 
-    let mut format = probe.format;
-
     let mut title = path
         .file_stem()
         .and_then(|s| s.to_str())
@@ -60,17 +58,12 @@ fn read_tags(path: &PathBuf) -> Option<(String, Vec<String>, Duration)> {
         .to_string();
     let mut artist = "Unknown".to_string();
     let mut duration = Duration::ZERO;
-    let mut meta_opt = format.metadata();
+    let meta_opt = format.metadata();
 
-    if meta_opt.current().is_none() {
-        if let Some(meta) = probe.metadata.get() {
-            meta_opt = meta;
-        }
-    }
     if let Some(rev) = meta_opt.current() {
-        for tag in rev.tags() {
-            let key = tag.key.to_string();
-            let val = tag.value.to_string();
+        for tag in &rev.media.tags {
+            let key = tag.raw.key.to_string();
+            let val = tag.raw.value.to_string();
             match key.to_lowercase().as_str() {
                 "title" | "tit2" if !val.is_empty() => title = val.to_string(),
                 "artist" | "tpe1" if !val.is_empty() => artist = val.to_string(),
@@ -80,13 +73,10 @@ fn read_tags(path: &PathBuf) -> Option<(String, Vec<String>, Duration)> {
     }
 
     if let Some(track) = format.tracks().first() {
-        if let (Some(tb), Some(n_frames)) =
-            (track.codec_params.time_base, track.codec_params.n_frames)
-        {
-            let ts: TimeStamp = n_frames as TimeStamp;
-            let time = tb.calc_time(ts);
-            duration = Duration::from_secs(time.seconds)
-                + Duration::from_millis((time.frac * 1000.) as u64);
+        if let (Some(tb), Some(n_frames)) = (track.time_base, track.num_frames) {
+            if let Some(time) = tb.calc_time(Timestamp::new(n_frames as i64)) {
+                duration = Duration::from_secs_f64(time.as_secs_f64());
+            }
         }
     }
 

@@ -1,17 +1,15 @@
-use rodio::{Sink, Source};
+use rodio::{Player, Source};
 use std::fs::File;
+use std::num::NonZero;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::Ordering;
-use std::sync::atomic::{AtomicBool, AtomicUsize};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
-use symphonia::core::audio::SampleBuffer;
-use symphonia::core::codecs::{CODEC_TYPE_NULL, DecoderOptions};
 use symphonia::core::errors::Error;
 use symphonia::core::formats::FormatOptions;
+use symphonia::core::formats::probe::Hint;
 use symphonia::core::io::MediaSourceStream;
 use symphonia::core::meta::MetadataOptions;
-use symphonia::core::probe::Hint;
 
 pub struct AudioBuffer {
     samples: Vec<f32>,
@@ -43,14 +41,14 @@ impl AudioBuffer {
 }
 
 pub struct SeekableAudio {
-    sink: Arc<Sink>,
+    sink: Arc<Player>,
     buffer: Arc<Mutex<AudioBuffer>>,
     source: Option<BufferSource>,
     cancelled: Arc<AtomicBool>,
 }
 
 impl SeekableAudio {
-    pub fn new(path: &Path, sink: Arc<Sink>) -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn new(path: &Path, sink: Arc<Player>) -> Result<Self, Box<dyn std::error::Error>> {
         let (sample_rate, channels, duration) = Self::read_metadata(path)?;
         let buffer = Arc::new(Mutex::new(AudioBuffer::new(
             sample_rate,
@@ -86,35 +84,43 @@ impl SeekableAudio {
             hint.with_extension(ext.to_str().unwrap_or(""));
         }
 
-        let probed = symphonia::default::get_probe().format(
+        let reader = symphonia::default::get_probe().probe(
             &hint,
             mss,
-            &FormatOptions::default(),
-            &MetadataOptions::default(),
+            FormatOptions::default(),
+            MetadataOptions::default(),
         )?;
-        let reader = probed.format;
 
         let track = reader
             .tracks()
             .iter()
-            .find(|t| t.codec_params.codec != CODEC_TYPE_NULL)
+            .find(|track| {
+                track
+                    .codec_params
+                    .as_ref()
+                    .and_then(|params| params.audio())
+                    .is_some_and(|params| {
+                        params.codec != symphonia::core::codecs::audio::CODEC_ID_NULL_AUDIO
+                    })
+            })
             .ok_or("No track")?;
 
-        let rate = track
+        let params = track
             .codec_params
-            .sample_rate
-            .ok_or("Missing sample rate")?;
-        let channels = track
-            .codec_params
-            .channels
-            .ok_or("Missing channels")?
-            .count() as u16;
+            .as_ref()
+            .and_then(|params| params.audio())
+            .ok_or("Not an audio track")?;
+        let rate = params.sample_rate.ok_or("Missing sample rate")?;
+        let channels = params.channels.as_ref().ok_or("Missing channels")?.count() as u16;
 
         let mut duration = Duration::ZERO;
-        if let Some(tb) = track.codec_params.time_base
-            && let Some(frames) = track.codec_params.n_frames
+        if let Some(tb) = track.time_base
+            && let Some(frames) = track.num_frames
         {
-            duration = tb.calc_time(frames).into();
+            if let Some(time) = tb.calc_time(symphonia::core::units::Timestamp::new(frames as i64))
+            {
+                duration = Duration::from_secs_f64(time.as_secs_f64());
+            }
         }
 
         Ok((rate, channels, duration))
@@ -133,23 +139,36 @@ impl SeekableAudio {
             hint.with_extension(ext.to_str().unwrap_or(""));
         }
 
-        let probed = symphonia::default::get_probe().format(
+        let mut reader = symphonia::default::get_probe().probe(
             &hint,
             mss,
-            &FormatOptions::default(),
-            &MetadataOptions::default(),
+            FormatOptions::default(),
+            MetadataOptions::default(),
         )?;
-
-        let mut reader = probed.format;
 
         let track = reader
             .tracks()
             .iter()
-            .find(|t| t.codec_params.codec != CODEC_TYPE_NULL)
+            .find(|track| {
+                track
+                    .codec_params
+                    .as_ref()
+                    .and_then(|params| params.audio())
+                    .is_some_and(|params| {
+                        params.codec != symphonia::core::codecs::audio::CODEC_ID_NULL_AUDIO
+                    })
+            })
             .ok_or("No audio track")?;
 
-        let mut decoder = symphonia::default::get_codecs()
-            .make(&track.codec_params, &DecoderOptions::default())?;
+        let codec_params = track
+            .codec_params
+            .as_ref()
+            .and_then(|params| params.audio())
+            .ok_or("Not an audio track")?;
+        let mut decoder = symphonia::default::get_codecs().make_audio_decoder(
+            codec_params,
+            &symphonia::core::codecs::audio::AudioDecoderOptions::default(),
+        )?;
 
         let track_id = track.id;
 
@@ -158,22 +177,21 @@ impl SeekableAudio {
                 break;
             }
             let packet = match reader.next_packet() {
-                Ok(p) => p,
+                Ok(Some(packet)) => packet,
+                Ok(None) => break,
                 Err(Error::IoError(_)) => break,
                 Err(e) => return Err(e.into()),
             };
 
-            if packet.track_id() != track_id {
+            if packet.track_id != track_id {
                 continue;
             }
 
             match decoder.decode(&packet) {
                 Ok(decoded) => {
-                    let spec = *decoded.spec();
-                    let mut buf = SampleBuffer::<f32>::new(decoded.capacity() as u64, spec);
-                    buf.copy_interleaved_ref(decoded);
-
-                    buffer.lock().unwrap().push_samples(buf.samples());
+                    let mut samples = Vec::with_capacity(decoded.samples_interleaved());
+                    decoded.copy_to_vec_interleaved(&mut samples);
+                    buffer.lock().unwrap().push_samples(&samples);
                 }
 
                 Err(Error::DecodeError(_)) => continue,
@@ -274,11 +292,11 @@ impl Iterator for BufferSource {
 }
 
 impl Source for BufferSource {
-    fn channels(&self) -> u16 {
-        self.buffer.lock().unwrap().channels
+    fn channels(&self) -> NonZero<u16> {
+        NonZero::new(self.buffer.lock().unwrap().channels).unwrap_or(NonZero::<u16>::MIN)
     }
-    fn sample_rate(&self) -> u32 {
-        self.buffer.lock().unwrap().sample_rate
+    fn sample_rate(&self) -> NonZero<u32> {
+        NonZero::new(self.buffer.lock().unwrap().sample_rate).unwrap_or(NonZero::<u32>::MIN)
     }
     fn current_span_len(&self) -> Option<usize> {
         None

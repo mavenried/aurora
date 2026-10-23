@@ -82,19 +82,19 @@ async fn async_main() -> std::io::Result<()> {
     // which otherwise grows the daemon log until /tmp fills up.
     let audio_error_reported = Arc::new(AtomicBool::new(false));
     let audio_error_reported_callback = audio_error_reported.clone();
-    let Ok(stream_handle) = rodio::OutputStreamBuilder::from_default_device().and_then(|builder| {
+    let Ok(stream_handle) = rodio::DeviceSinkBuilder::from_default_device().and_then(|builder| {
         builder
             .with_error_callback(move |err| {
                 if !audio_error_reported_callback.swap(true, Ordering::Relaxed) {
                     tracing::error!(error = %err, "Audio output stream error; suppressing repeated backend errors");
                 }
             })
-            .open_stream_or_fallback()
+            .open_sink_or_fallback()
     }) else {
         tracing::error!("Could not open a rodio output stream.");
         std::process::exit(1);
     };
-    let sink = rodio::Sink::connect_new(stream_handle.mixer());
+    let sink = rodio::Player::connect_new(stream_handle.mixer());
 
     let db = helpers::db::open()?;
 
