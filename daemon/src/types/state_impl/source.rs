@@ -189,6 +189,28 @@ impl SeekableAudio {
 
             match decoder.decode(&packet) {
                 Ok(decoded) => {
+                    // Codec parameters describe the stream, but the decoder's
+                    // output spec is authoritative (some formats can update
+                    // their parameters after probing). The Source rate is what
+                    // Rodio uses to determine playback speed, so stale probe
+                    // metadata here changes both pitch and duration.
+                    let spec = decoded.spec();
+                    let decoded_rate = spec.rate();
+                    let decoded_channels = spec.channels().count() as u16;
+                    {
+                        let mut buffer = buffer.lock().unwrap();
+                        if buffer.samples.is_empty() {
+                            buffer.sample_rate = decoded_rate;
+                            buffer.channels = decoded_channels;
+                        } else if buffer.sample_rate != decoded_rate
+                            || buffer.channels != decoded_channels
+                        {
+                            return Err(format!(
+                                "Audio format changed while decoding ({} Hz/{} channels to {} Hz/{} channels)",
+                                buffer.sample_rate, buffer.channels, decoded_rate, decoded_channels
+                            ).into());
+                        }
+                    }
                     let mut samples = Vec::with_capacity(decoded.samples_interleaved());
                     decoded.copy_to_vec_interleaved(&mut samples);
                     buffer.lock().unwrap().push_samples(&samples);
