@@ -328,13 +328,13 @@ pub fn build_root(app: &adw::Application) -> Shared {
     content_stack.add_named(&queue_page, Some("queue"));
     content_stack.add_named(&settings_page, Some("settings"));
     content_stack.add_named(&now_playing_page, Some("now-playing"));
-    content_stack.set_visible_child_name("search");
+    content_stack.set_visible_child_name("detail");
     content_stack.set_vexpand(true);
 
     let content_toolbar = adw::ToolbarView::new();
     content_toolbar.add_top_bar(&adw::HeaderBar::new());
     content_toolbar.set_content(Some(&content_stack));
-    let content_page = adw::NavigationPage::builder().title("Search").child(&content_toolbar).build();
+    let content_page = adw::NavigationPage::builder().title("Recently Played").child(&content_toolbar).build();
 
     let split_view = adw::NavigationSplitView::new();
     split_view.set_sidebar(Some(&sidebar_page));
@@ -422,6 +422,7 @@ pub fn build_root(app: &adw::Application) -> Shared {
 
     // ---- Wiring (now that `shared` exists) ----
     sidebar::wire(&shared, &sidebar_built);
+    set_nav(&shared, NavTarget::Recent);
     player::wire(&shared, &player_built);
     wire_settings(&shared);
     {

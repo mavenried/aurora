@@ -14,11 +14,11 @@ pub fn format_duration(d: Duration) -> String {
 /// Which destination is selected in the sidebar / shown in the content pane.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub enum NavTarget {
-    #[default]
     Search,
     Queue,
     Settings,
     Liked,
+    #[default]
     Recent,
     Playlist(Uuid),
 }

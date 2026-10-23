@@ -71,7 +71,7 @@ pub fn build() -> Built {
     playlists_section.set_margin_end(6);
     playlists_section.set_margin_bottom(6);
 
-    search_row.add_css_class("active");
+    recent_row.add_css_class("active");
 
     Built {
         top_nav: top_nav.upcast(),
@@ -87,7 +87,7 @@ pub fn build() -> Built {
 
 /// Attaches click handling now that `shared` exists.
 pub fn wire(shared: &Shared, built: &Built) {
-    shared.borrow_mut().sidebar_active_row = Some(built.search_row.clone().upcast());
+    shared.borrow_mut().sidebar_active_row = Some(built.recent_row.clone().upcast());
 
     wire_row(shared, &built.search_row, NavTarget::Search);
     wire_row(shared, &built.queue_row, NavTarget::Queue);
