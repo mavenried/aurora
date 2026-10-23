@@ -5,7 +5,10 @@ use std::{
     env::args,
     fs::{File, remove_file},
     path::PathBuf,
-    sync::Arc,
+    sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    },
     time::{Duration, Instant},
     vec,
 };
@@ -74,7 +77,20 @@ async fn async_main() -> std::io::Result<()> {
         }
     });
 
-    let Ok(stream_handle) = rodio::OutputStreamBuilder::open_default_stream() else {
+    // Rodio's default callback prints every backend error to stderr. ALSA can
+    // report POLLERR continuously after the machine resumes from suspend,
+    // which otherwise grows the daemon log until /tmp fills up.
+    let audio_error_reported = Arc::new(AtomicBool::new(false));
+    let audio_error_reported_callback = audio_error_reported.clone();
+    let Ok(stream_handle) = rodio::OutputStreamBuilder::from_default_device().and_then(|builder| {
+        builder
+            .with_error_callback(move |err| {
+                if !audio_error_reported_callback.swap(true, Ordering::Relaxed) {
+                    tracing::error!(error = %err, "Audio output stream error; suppressing repeated backend errors");
+                }
+            })
+            .open_stream_or_fallback()
+    }) else {
         tracing::error!("Could not open a rodio output stream.");
         std::process::exit(1);
     };
