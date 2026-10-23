@@ -3,7 +3,7 @@ use std::fs::File;
 use std::num::NonZero;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Condvar, Mutex};
 use std::time::Duration;
 use symphonia::core::errors::Error;
 use symphonia::core::formats::FormatOptions;
@@ -11,11 +11,17 @@ use symphonia::core::formats::probe::Hint;
 use symphonia::core::io::MediaSourceStream;
 use symphonia::core::meta::MetadataOptions;
 
+// Player is connected to Rodio's mixer once, so its advertised sample rate
+// must not change when the queued track changes.
+const PLAYBACK_SAMPLE_RATE: u32 = 48_000;
+const PLAYBACK_CHANNELS: usize = 2;
+
 pub struct AudioBuffer {
     samples: Vec<f32>,
     sample_rate: u32,
     channels: u16,
     fully_loaded: bool,
+    format_ready: bool,
     duration: Duration,
 }
 
@@ -26,6 +32,7 @@ impl AudioBuffer {
             sample_rate,
             duration,
             fully_loaded: false,
+            format_ready: false,
             channels,
         }
     }
@@ -35,8 +42,8 @@ impl AudioBuffer {
     }
 
     fn sample_index_from_time(&self, pos: Duration) -> usize {
-        let frame = (pos.as_secs_f64() * self.sample_rate as f64) as usize;
-        frame * self.channels as usize
+        let frame = (pos.as_secs_f64() * PLAYBACK_SAMPLE_RATE as f64) as usize;
+        frame * PLAYBACK_CHANNELS
     }
 }
 
@@ -56,13 +63,27 @@ impl SeekableAudio {
             duration,
         )));
         let cancelled = Arc::new(AtomicBool::new(false));
+        let format_ready = Arc::new(Condvar::new());
 
         {
             let path = path.to_owned();
             let buffer_clone = buffer.clone();
             let cancelled_clone = cancelled.clone();
-            std::thread::spawn(move || decode_worker(path, buffer_clone, cancelled_clone));
+            let format_ready_clone = format_ready.clone();
+            std::thread::spawn(move || {
+                decode_worker(path, buffer_clone, cancelled_clone, format_ready_clone)
+            });
         }
+
+        // Rodio derives its playback conversion from the Source format when it
+        // starts consuming it. Wait until Symphonia has decoded a packet and
+        // established the actual output format before appending the source.
+        let mut state = buffer.lock().unwrap();
+        while !state.format_ready && !state.fully_loaded {
+            state = format_ready.wait(state).unwrap();
+        }
+        drop(state);
+
         let buf = BufferSource::new(buffer.clone(), 0);
         sink.append(buf.clone());
         sink.pause();
@@ -130,6 +151,7 @@ impl SeekableAudio {
         path: PathBuf,
         buffer: Arc<Mutex<AudioBuffer>>,
         cancelled: Arc<AtomicBool>,
+        format_ready: Arc<Condvar>,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let file = Box::new(File::open(&path)?);
         let mss = MediaSourceStream::new(file, Default::default());
@@ -199,9 +221,10 @@ impl SeekableAudio {
                     let decoded_channels = spec.channels().count() as u16;
                     {
                         let mut buffer = buffer.lock().unwrap();
-                        if buffer.samples.is_empty() {
+                        if !buffer.format_ready {
                             buffer.sample_rate = decoded_rate;
                             buffer.channels = decoded_channels;
+                            buffer.format_ready = true;
                         } else if buffer.sample_rate != decoded_rate
                             || buffer.channels != decoded_channels
                         {
@@ -211,6 +234,7 @@ impl SeekableAudio {
                             ).into());
                         }
                     }
+                    format_ready.notify_all();
                     let mut samples = Vec::with_capacity(decoded.samples_interleaved());
                     decoded.copy_to_vec_interleaved(&mut samples);
                     buffer.lock().unwrap().push_samples(&samples);
@@ -224,6 +248,7 @@ impl SeekableAudio {
         }
 
         buffer.lock().unwrap().fully_loaded = true;
+        format_ready.notify_all();
         Ok(())
     }
 
@@ -260,12 +285,23 @@ impl Drop for SeekableAudio {
     }
 }
 
-fn decode_worker(path: PathBuf, buffer: Arc<Mutex<AudioBuffer>>, cancelled: Arc<AtomicBool>) {
-    if let Err(err) = SeekableAudio::decode_streaming(path.clone(), buffer.clone(), cancelled) {
+fn decode_worker(
+    path: PathBuf,
+    buffer: Arc<Mutex<AudioBuffer>>,
+    cancelled: Arc<AtomicBool>,
+    format_ready: Arc<Condvar>,
+) {
+    if let Err(err) = SeekableAudio::decode_streaming(
+        path.clone(),
+        buffer.clone(),
+        cancelled,
+        format_ready.clone(),
+    ) {
         tracing::error!("Failed to decode audio file {path:?}: {err}");
         if let Ok(mut buffer) = buffer.lock() {
             buffer.fully_loaded = true;
         }
+        format_ready.notify_all();
     }
 }
 
@@ -285,8 +321,8 @@ impl BufferSource {
     pub fn current_position(&self) -> Duration {
         let idx = self.position.load(Ordering::Relaxed);
         let buf = self.buffer.lock().unwrap();
-        let frame = idx / buf.channels as usize;
-        Duration::from_secs_f64(frame as f64 / buf.sample_rate as f64)
+        let frame = idx / PLAYBACK_CHANNELS;
+        Duration::from_secs_f64(frame as f64 / PLAYBACK_SAMPLE_RATE as f64)
     }
 }
 
@@ -297,13 +333,33 @@ impl Iterator for BufferSource {
         loop {
             let buf = self.buffer.lock().unwrap();
 
-            if self.position.load(Ordering::Relaxed) < buf.samples.len() {
-                let s = buf.samples[self.position.load(Ordering::Relaxed)];
+            let output_index = self.position.load(Ordering::Relaxed);
+            let output_frame = output_index / PLAYBACK_CHANNELS;
+            let output_channel = output_index % PLAYBACK_CHANNELS;
+            let input_channels = buf.channels as usize;
+            let channel = output_channel.min(input_channels.saturating_sub(1));
+            let input_position =
+                output_frame as f64 * buf.sample_rate as f64 / PLAYBACK_SAMPLE_RATE as f64;
+            let input_frame = input_position.floor() as usize;
+            let fraction = input_position - input_frame as f64;
+            let input_index = input_frame * input_channels + channel;
+            let next_index = (input_frame + 1) * input_channels + channel;
+
+            if input_index < buf.samples.len()
+                && (fraction == 0.0 || next_index < buf.samples.len() || buf.fully_loaded)
+            {
+                let first = buf.samples[input_index];
+                let sample = if fraction == 0.0 || next_index >= buf.samples.len() {
+                    first
+                } else {
+                    let second = buf.samples[next_index];
+                    first + (second - first) * fraction as f32
+                };
                 self.position.fetch_add(1, Ordering::Relaxed);
-                return Some(s);
+                return Some(sample);
             }
 
-            if buf.fully_loaded {
+            if buf.fully_loaded && input_index >= buf.samples.len() {
                 return None;
             }
 
@@ -315,10 +371,10 @@ impl Iterator for BufferSource {
 
 impl Source for BufferSource {
     fn channels(&self) -> NonZero<u16> {
-        NonZero::new(self.buffer.lock().unwrap().channels).unwrap_or(NonZero::<u16>::MIN)
+        NonZero::new(PLAYBACK_CHANNELS as u16).unwrap_or(NonZero::<u16>::MIN)
     }
     fn sample_rate(&self) -> NonZero<u32> {
-        NonZero::new(self.buffer.lock().unwrap().sample_rate).unwrap_or(NonZero::<u32>::MIN)
+        NonZero::new(PLAYBACK_SAMPLE_RATE).unwrap_or(NonZero::<u32>::MIN)
     }
     fn current_span_len(&self) -> Option<usize> {
         None
@@ -360,7 +416,12 @@ mod tests {
         )));
         let path = std::env::temp_dir().join(format!("missing-audio-{}", uuid::Uuid::new_v4()));
 
-        decode_worker(path, buffer.clone(), Arc::new(AtomicBool::new(false)));
+        decode_worker(
+            path,
+            buffer.clone(),
+            Arc::new(AtomicBool::new(false)),
+            Arc::new(Condvar::new()),
+        );
 
         assert!(buffer.lock().unwrap().fully_loaded);
     }
